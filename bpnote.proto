@@ -1,0 +1,58 @@
+// bpnote.proto
+syntax = "proto3";
+
+message Artist {
+    uint32 id = 1;
+    string name = 2;
+}
+
+message MusicGenre {
+    uint32 id = 1;
+    string name = 2;
+}
+
+message MusicPart {
+    uint32 id = 1;
+    string name = 2;
+}
+
+enum SourceType {
+    URL = 1;
+    YOUTUBE = 2;
+    YOUTUBE_MUSIC = 3;
+}
+
+message Source {
+    uint32 id = 1;
+    SourceType type = 2;
+    string data = 3;
+}
+
+message Trick {
+    uint32 id = 1;
+    string description = 2;
+}
+
+message TrickMetadata {
+    uint32 trick_id = 2;
+    uint32 music_genre_id = 3;
+    uint32 music_part_id = 4;
+    uint32 artist_id = 5;
+    uint32 source_id = 6;
+    int32 timestamp = 7;
+}
+
+message Version {
+    uint8 major = 1;
+    uint8 minor = 2;
+}
+
+message BPNoteFile {
+    Version version = 1;
+    repeated Trick tricks = 2;
+    repeated MusicGenre MusicGenres = 3;
+    repeated MusicPart MusicParts = 4;
+    repeated Artist Artists = 5;
+    repeated Source Sources = 6;
+    repeated TrickMetadata trickmetadatas = 2;
+}
