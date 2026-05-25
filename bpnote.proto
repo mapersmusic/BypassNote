@@ -43,8 +43,8 @@ message TrickMetadata {
 }
 
 message Version {
-    uint8 major = 1;
-    uint8 minor = 2;
+    uint32 major = 1;
+    uint32 minor = 2;
 }
 
 message BPNoteFile {
@@ -54,5 +54,5 @@ message BPNoteFile {
     repeated MusicPart MusicParts = 4;
     repeated Artist Artists = 5;
     repeated Source Sources = 6;
-    repeated TrickMetadata trickmetadatas = 2;
+    repeated TrickMetadata trickmetadatas = 7;
 }
