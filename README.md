@@ -1,6 +1,16 @@
 # BypassNote
 
-![BypassNote UI](BypassNoteUI.png)
+<div align="center">
+  <img src="assets/icon.png" alt="icon" width="200" />
+</div>
+
+## Overview
+
+<div align="center">
+  <img src="BypassNoteMobile.jpg" alt="BypassNoteMobile" width="200" />
+</div>
+
+![BypassNote UI](BypassNoteDesktop.png)
 
 ## Build app for android
 
