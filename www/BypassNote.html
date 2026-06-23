@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BypassNote</title>
+
+<!-- ── Dépendances ─────────────────────────────────────────────────────────── -->
+<!-- 1. protobufjs browser bundle -->
+<script src="https://cdn.jsdelivr.net/npm/protobufjs@8.4.2/dist/protobuf.min.js"></script>
+<script src="bpnote_pb.js"></script>
+<script>
+  if (typeof protobuf !== 'undefined' && protobuf.roots) {
+    window.BPNoteCompiled = protobuf.roots["default"] || protobuf.roots.default;
+  }
+</script>
+<script src="bpnote_codec.js"></script>
+<script src="bpnote-file-io.js"></script>
+<!-- Tabler Icons local -->
+<link rel="stylesheet" href="tabler-icons.min.css">
+
+<style>
+/* ── Reset & tokens ─────────────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg0:#0f0f11;--bg1:#18181b;--bg2:#1e1e23;--bg3:#27272d;
+  --br:#2e2e36;--br2:#3a3a44;
+  --t0:#e4e4f0;--t1:#a1a1b5;--t2:#6b6b7e;
+  --acc:#6c63ff;--acc2:#4f46e5;--acc-t:rgba(108,99,255,.15);
+  --ok:#22c55e;--warn:#f59e0b;--err:#ef4444;--yt:#dc2626;--ytm:#d97706;
+  --mono:'JetBrains Mono',monospace;
+  --r:6px;--r2:10px;
+  font-family:'IBM Plex Sans',system-ui,sans-serif;
+}
+
+body{background:var(--bg0);color:var(--t0);font-size:14px;min-height:100vh;display:flex;flex-direction:column;}
+
+/* ── Loading screen ─────────────────────────────────────────────────────────── */
+#loader{position:fixed;inset:0;background:var(--bg0);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999;transition:opacity .3s}
+#loader.hidden{opacity:0;pointer-events:none}
+.spin{width:36px;height:36px;border:3px solid var(--br2);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loaderMsg{color:var(--t1);font-size:13px}
+
+/* ── Drop overlay ────────────────────────────────────────────────────────────── */
+#dropzone{display:none;position:fixed;inset:0;background:rgba(108,99,255,.18);border:3px dashed var(--acc);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:12px;font-size:18px;color:var(--acc)}
+#dropzone.active{display:flex}
+
+/* ── Top bar ─────────────────────────────────────────────────────────────────── */
+header{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--br);background:var(--bg1);flex-wrap:wrap;gap:8px}
+header h1{font-size:15px;font-weight:600;letter-spacing:-.3px;display:flex;align-items:center;gap:7px;color:var(--t0)}
+header h1 .logo{color:var(--acc);font-size:20px}
+
+.verpill{display:flex;align-items:center;gap:3px;background:var(--bg2);border:1px solid var(--br);border-radius:999px;padding:3px 10px;font-size:12px;color:var(--t1)}
+.verpill input{width:30px;background:none;border:none;text-align:center;font-size:12px;color:var(--t0);padding:0}
+.verpill input:focus{outline:none;color:var(--acc)}
+
+
+.spacer{flex:1}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:var(--r);border:1px solid var(--br2);cursor:pointer;font-size:12px;font-weight:500;background:var(--bg2);color:var(--t0);white-space:nowrap;transition:all .15s}
+.btn:hover{border-color:var(--acc);color:var(--acc)}
+.btn.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.primary:hover{background:var(--acc2);border-color:var(--acc2)}
+  .btn.clear{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.35);color:var(--err)}
+  .btn.clear:hover{background:rgba(239,68,68,.16);border-color:var(--err);color:var(--err)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.top-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.mobile-menu-toggle{display:none;padding:8px 12px;min-width:44px;min-height:44px;justify-content:center}
+.mobile-menu-toggle:active{opacity:0.8}
+.mobile-menu{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:150;align-items:center;justify-content:center;padding:16px}
+.mobile-menu.active{display:flex}
+.mobile-menu-panel{background:var(--bg1);border:1px solid var(--br);border-radius:var(--r2);width:min(100%,320px);max-width:320px;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:12px}
+.mobile-menu-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.mobile-menu-panel .menu-group{display:flex;flex-direction:column;gap:6px}
+.mobile-menu-panel .menu-label{font-size:12px;color:var(--t2);text-transform:uppercase;letter-spacing:.05em}
+.mobile-menu-panel .menu-button{width:100%;text-align:left;justify-content:flex-start;padding:10px 12px;background:var(--bg2);border:1px solid var(--br2);border-radius:var(--r);color:var(--t0);font-size:13px}
+.mobile-menu-panel .menu-button:hover{border-color:var(--acc);color:var(--acc)}
+
+/* ── Hex panel ───────────────────────────────────────────────────────────────── */
+#hexPanel{background:var(--bg1);padding:8px 16px;font-family:var(--mono);font-size:11px;max-height:130px;overflow-y:auto;border-bottom:1px solid var(--br);display:none}
+.hexrow{display:flex;gap:10px;margin-bottom:2px;line-height:1.6}
+.hexrow .addr{color:var(--t2);width:40px;flex-shrink:0}
+.hexrow .data{color:#4ade80}
+.hexrow .asc{color:var(--t2);border-left:1px solid var(--br);padding-left:10px;letter-spacing:.5px}
+
+/* ── Layout ──────────────────────────────────────────────────────────────────── */
+.layout{display:flex;flex:1;overflow:hidden}
+
+/* sidebar */
+nav.sidebar{width:168px;flex-shrink:0;border-right:1px solid var(--br);background:var(--bg1);padding:8px;overflow-y:auto}
+.nav-label{font-size:10px;font-weight:600;letter-spacing:.8px;color:var(--t2);text-transform:uppercase;padding:8px 8px 4px}
+nav.sidebar button{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;padding:6px 9px;border-radius:var(--r);border:none;background:none;cursor:pointer;font-size:13px;color:var(--t1);margin-bottom:2px;transition:all .12s}
+nav.sidebar button:hover{background:var(--bg3);color:var(--t0)}
+nav.sidebar button.active{background:var(--acc-t);color:var(--acc);font-weight:500}
+.cnt{font-size:11px;background:var(--bg3);padding:1px 6px;border-radius:999px;color:var(--t2)}
+nav.sidebar button.active .cnt{background:rgba(108,99,255,.25);color:var(--acc)}
+
+/* main content */
+main.content{flex:1;padding:14px;overflow:auto;background:var(--bg0)}
+.card{background:var(--bg1);border:1px solid var(--br);border-radius:var(--r2);padding:14px}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.card-title{font-size:14px;font-weight:600}
+
+/* table */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:7px 10px;color:var(--t2);font-weight:500;border-bottom:1px solid var(--br);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+td{padding:7px 10px;border-bottom:1px solid var(--br);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg2)}
+
+.empty-state{text-align:center;padding:50px;color:var(--t2);font-size:13px}
+.empty-state i{font-size:32px;display:block;margin-bottom:8px;opacity:.4}
+
+/* badges */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500}
+.badge.url{background:rgba(108,99,255,.15);color:var(--acc)}
+.badge.yt{background:rgba(220,38,38,.15);color:var(--yt)}
+.badge.ytm{background:rgba(217,119,6,.15);color:var(--ytm)}
+
+/* ── Modal ───────────────────────────────────────────────────────────────────── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;backdrop-filter:blur(3px)}
+.modal{background:var(--bg1);border:1px solid var(--br2);border-radius:var(--r2);width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--br)}
+.modal-head h3{font-size:14px;font-weight:600}
+.modal-body{padding:16px;max-height:60vh;overflow-y:auto}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--br)}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12px;color:var(--t1);margin-bottom:5px;font-weight:500}
+.field input,.field select,.field textarea{width:100%;background:var(--bg2);border:1px solid var(--br2);border-radius:var(--r);padding:7px 10px;font-size:13px;color:var(--t0);outline:none;font-family:inherit}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--acc)}
+.field select option{background:var(--bg2)}
+.toolbar-select{background:var(--bg2);border:1px solid var(--br2);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--t0);outline:none;min-width:170px;cursor:pointer}
+.toolbar-select:focus{border-color:var(--acc)}
+.toolbar-select option{background:var(--bg2)}
+
+.info-box{background:rgba(108,99,255,.08);border:1px solid var(--acc2);border-radius:var(--r);padding:8px 12px;font-size:12px;color:var(--t1);margin-bottom:10px;line-height:1.5}
+.warn-box{background:rgba(245,158,11,.08);border:1px solid var(--warn);border-radius:var(--r);padding:8px 12px;font-size:12px;color:var(--warn);margin-bottom:10px;line-height:1.5}
+
+@media (max-width: 960px) {
+  body{font-size:13px}
+  header{flex-direction:column;align-items:stretch;gap:12px}
+  header h1{width:100%;justify-content:flex-start;flex-direction:row}
+  .verpill{justify-content:center;width:auto}
+  .top-actions{display:none}
+  .mobile-menu-toggle{display:inline-flex}
+  .layout{flex-direction:column}
+  nav.sidebar{width:100%;border-right:none;border-bottom:1px solid var(--br);padding:8px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;overflow:visible}
+  nav.sidebar .nav-label{grid-column:1/-1;padding-bottom:4px}
+  nav.sidebar button{flex:1 1 auto;margin-bottom:0;width:100%;white-space:normal;justify-content:center}
+  main.content{padding:12px}
+  .card{overflow-x:auto}
+  .card-header{flex-direction:column;align-items:flex-start;gap:10px}
+  .card-header button{width:100%;max-width:none}
+  .modal{width:min(100%, 95vw);max-height:90vh}
+  .modal-body{max-height:calc(90vh - 120px)}
+}
+
+@media (max-width: 640px) {
+  nav.sidebar{display:none}
+  header{gap:8px}
+  .btn{font-size:11px;padding:6px 9px}
+  .btn.primary{width:100%}
+  .field input,.field select,.field textarea{font-size:12px}
+  .toolbar-placeholder{flex-direction:column;align-items:stretch}
+}
+</style>
+
+<!-- Google Fonts (no tracking, just CSS link) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ── Loading screen ────────────────────────────────────────────────────────── -->
+<div id="loader">
+  <div class="spin"></div>
+  <div id="loaderMsg">Chargement du schéma…</div>
+</div>
+
+<!-- ── Drop zone ─────────────────────────────────────────────────────────────── -->
+<div id="dropzone">
+  <i class="ti ti-file-arrow-down" style="font-size:48px"></i>
+  <span>Déposer un fichier .bpnote</span>
+</div>
+
+<!-- ── App ───────────────────────────────────────────────────────────────────── -->
+<div id="app" style="display:none;flex-direction:column;min-height:100vh;display:flex">
+
+  <header>
+    <i class="ti ti-music-bolt logo" aria-hidden="true"></i>
+    <h1>BypassNote</h1>
+    <div class="verpill" title="Version du logiciel BypassNote">
+      <span style="color:var(--t2)">app</span>
+      <strong>0.1</strong>
+    </div>
+
+    <!-- proto editor removed: schema editing is not allowed in-app -->
+
+    <button class="btn mobile-menu-toggle" id="mobileMenuBtn" onclick="toggleMobileMenu()"><i class="ti ti-menu-2" aria-hidden="true"></i></button>
+    <div class="spacer"></div>
+    <div class="top-actions">
+      <button class="btn" id="hexBtn"><i class="ti ti-terminal-2" aria-hidden="true"></i> Hex <span id="hexSz" style="color:var(--t2)">0 B</span></button>
+      <button class="btn" id="importBpnote"><i class="ti ti-upload" aria-hidden="true"></i> Importer .bpnote</button>
+      <input type="file" id="fileInBpnote" accept=".bpnote" multiple style="display:none">
+      <button class="btn" id="modulesBtn"><i class="ti ti-shape" aria-hidden="true"></i> Modules</button>
+      <button class="btn primary" id="exportBtn"><i class="ti ti-download" aria-hidden="true"></i> Exporter .bpnote</button>
+    </div>
+  </header>
+
+  <div id="mobileMenu" class="mobile-menu" onclick="toggleMobileMenu(false)">
+    <div class="mobile-menu-panel" onclick="event.stopPropagation()">
+      <div class="mobile-menu-head">
+        <strong>Menu</strong>
+        <button class="btn edit-b" onclick="toggleMobileMenu(false)" aria-label="Fermer le menu">×</button>
+      </div>
+      <div id="mobileMenuContent"></div>
+    </div>
+  </div>
+
+  <!-- hex dump -->
+  <div id="hexPanel"></div>
+
+  <div class="layout">
+    <nav class="sidebar" id="sidebar"></nav>
+    <main class="content" id="main"></main>
+  </div>
+
+  <!-- proto source panel removed -->
+</div>
+
+<!-- ── Modal générique ────────────────────────────────────────────────────────── -->
+<div id="modalWrap" style="display:none">
+  <div class="overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="mTitle"></h3>
+        <button class="btn edit-b" id="mClose" style="font-size:18px;padding:2px 6px;border:none">×</button>
+      </div>
+      <div class="modal-body" id="mBody"></div>
+      <div class="modal-foot">
+        <button class="btn" id="mCancel">Annuler</button>
+        <button class="btn primary" id="mSave">Sauvegarder</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     bpnote_pb.js est chargé comme module inline ici pour éviter les
+     contraintes CORS d'un import depuis file://
+     ══════════════════════════════════════════════════════════════════════════ -->
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════════
+   EDITOR — UI uniquement.
+   Toute la logique binaire est dans BPNoteCodec (dans bpnote_codec.js).
+   La source de vérité est le module compilé bpnote_pb.js.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+// ── Schéma précompilé chargé depuis bpnote_pb.js
+
+// ── Versions
+const APP_VERSION = '0.1';
+const STANDARD_VERSION = { major: 0, minor: 1 };
+
+// ── État global ────────────────────────────────────────────────────────────
+let codec = null;       // instance BPNoteCodec courante
+let fileIO = null;       // helper for bpnote import/export
+
+let state = {
+  version:        { major: 1, minor: 0 },
+  tricks:         [],
+  musicGenres:    [],
+  musicParts:     [],
+  artists:        [],
+  sources:        [],
+  trickMetadatas: [],
+  author:         '',
+  _files:         [],
+};
+
+// ── Onglets ─────────────────────────────────────────────────────────────────
+const TABS = [
+  { id: 'tricks',         label: 'Tricks',         icon: 'ti-bolt' },
+  { id: 'musicGenres',    label: 'Genres',         icon: 'ti-music' },
+  { id: 'musicParts',     label: 'Parties',        icon: 'ti-wave-sine' },
+  { id: 'artists',        label: 'Artistes',       icon: 'ti-microphone' },
+  { id: 'sources',        label: 'Sources',        icon: 'ti-link' },
+  { id: 'trickMetadatas', label: 'Métadonnées',    icon: 'ti-tags' },
+];
+let activeTab = 'tricks';
+
+const SRC_LABELS = { 1: 'URL', 2: 'YouTube', 3: 'YouTube Music' };
+const SRC_BADGE  = { 1: 'url', 2: 'yt',      3: 'ytm' };
+const SOURCE_MERGED = 'merged';
+const SOURCE_LOCAL = 'Local';
+
+const TONIC_LABELS = {
+  0: 'C', 1: 'C# / D♭', 2: 'D', 3: 'D# / E♭', 4: 'E',
+  5: 'F', 6: 'F# / G♭', 7: 'G', 8: 'G# / A♭',
+  9: 'A', 10: 'A# / B♭', 11: 'B',
+};
+const MODE_LABELS = {
+  0: 'Majeur', 1: 'Dorien', 2: 'Phrygien', 3: 'Lydien', 4: 'Mixolydien', 5: 'Aeolien', 6: 'Locrien',
+  7: 'Mineur mélodique', 8: 'Dorien ♭2', 9: 'Lydien augmenté', 10: 'Lydien ♭7',
+  11: 'Mixolydien ♭6', 12: 'Locrien ♮2', 13: 'Altéré',
+  14: 'Mineur harmonique', 15: 'Phrygien dominant', 16: 'Lydien ♯2', 17: 'Ultra locrien',
+  18: 'Harmonique majeur', 19: 'Dorien ♭5', 20: 'Phrygien ♭4', 21: 'Lydien ♭3',
+  22: 'Mixolydien ♭2', 23: 'Lydien augmenté ♯2', 24: 'Locrien ♭7',
+  25: 'Whole tone', 26: 'Dim. ton-demi', 27: 'Dim. demi-ton',
+  28: 'Hungarian minor', 29: 'Hungarian major', 30: 'Hijaz', 31: 'Double harmonique',
+  32: 'Hirajoshi', 33: 'Pelog', 34: 'Prometheus', 35: 'Enigmatic',
+  36: 'Neapolitan minor', 37: 'Neapolitan major', 38: 'Oriental',
+};
+
+const e = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const nextId = arr => arr.length ? Math.max(...arr.map(i=>i.id||0)) + 1 : 1;
+
+let importedFiles = [];
+let activeFileView = SOURCE_MERGED;
+let searchQuery = '';
+let sortKey = 'id';
+let sortDir = 1;
+let uidCtr = 1;
+
+const moduleHelpers = {
+  exportCsv: exportCurrentViewAsCsv,
+  showMessage: showModuleMessage,
+  openExternal: openExternalLink,
+  openModulePage,
+};
+
+const builtInModules = [
+  {
+    id: 'random-trick',
+    name: 'Trick aléatoire',
+    description: 'Choisit un trick au hasard parmi les tricks visibles.',
+    createPage({ getVisibleItems }) {
+      const tricks = getVisibleItems('tricks');
+      if (!tricks.length) {
+        return `<div style="padding:24px;font-family:IBM Plex Sans,system-ui,sans-serif;color:#e4e4f0;background:#0f0f11;min-height:100vh">
+          <h1>Aucun trick disponible</h1>
+          <p>Aucune donnée de tricks n'est visible pour ce module.</p>
+        </div>`;
+      }
+      const pick = tricks[Math.floor(Math.random() * tricks.length)];
+      return `<div style="padding:24px;font-family:IBM Plex Sans,system-ui,sans-serif;color:#e4e4f0;background:#0f0f11;min-height:100vh">
+        <h1>Trick aléatoire</h1>
+        <p><strong>Description :</strong> ${e(pick.description)}</p>
+        <p><strong>ID :</strong> ${pick.id}</p>
+        <p><strong>Source :</strong> ${e(pick._sourceFile || SOURCE_LOCAL)}</p>
+        <p><button style="padding:10px 16px;border:none;border-radius:8px;background:#6c63ff;color:#fff;cursor:pointer" onclick="window.close()">Fermer</button></p>
+      </div>`;
+    },
+  },
+  {
+    id: 'export-csv',
+    name: 'Exporter CSV',
+    description: 'Génère une page web permettant de télécharger les lignes visibles au format CSV.',
+    createPage({ state, getVisibleItems }) {
+      const items = getVisibleItems(activeTab);
+      const rows = [];
+      const headers = [];
+      switch (activeTab) {
+        case 'tricks':
+          headers.push('ID', 'Description', 'Fichier');
+          items.forEach(i => rows.push([i.id, i.description, i._sourceFile || SOURCE_LOCAL]));
+          break;
+        case 'musicGenres': case 'musicParts': case 'artists':
+          headers.push('ID', 'Nom', 'Fichier');
+          items.forEach(i => rows.push([i.id, i.name, i._sourceFile || SOURCE_LOCAL]));
+          break;
+        case 'sources':
+          headers.push('ID', 'Type', 'Données', 'Fichier');
+          items.forEach(i => rows.push([i.id, SRC_LABELS[i.type] || i.type, i.data, i._sourceFile || SOURCE_LOCAL]));
+          break;
+        case 'trickMetadatas':
+          headers.push('Trick', 'Genre', 'Partie', 'Artiste', 'Source', 'Timestamp', 'Fichier');
+          items.forEach(i => rows.push([
+            resolveName(state.tricks, i.trickId, 'description'),
+            resolveName(state.musicGenres, i.musicGenreId, 'name'),
+            resolveName(state.musicParts, i.musicPartId, 'name'),
+            resolveName(state.artists, i.artistId, 'name'),
+            resolveSourceText(i.sourceId),
+            i.timestamp || 0,
+            i._sourceFile || SOURCE_LOCAL,
+          ]));
+          break;
+      }
+      const csvContent = [headers.join(','), ...rows.map(row => row.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(','))].join('\r\n');
+      const encoded = encodeURIComponent(csvContent);
+      return `<div style="padding:24px;font-family:IBM Plex Sans,system-ui,sans-serif;color:#e4e4f0;background:#0f0f11;min-height:100vh">
+        <h1>Exporter CSV</h1>
+        <p>Le module a généré un CSV pour les éléments visibles.</p>
+        <a href="data:text/csv;charset=utf-8,${encoded}" download="${activeTab}-${activeFileView||SOURCE_MERGED}.csv" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#6c63ff;color:#fff;text-decoration:none">Télécharger le CSV</a>
+        <p style="margin-top:16px"><button style="padding:10px 16px;border:none;border-radius:8px;background:#3b82f6;color:#fff;cursor:pointer" onclick="window.close()">Fermer</button></p>
+      </div>`;
+    },
+  },
+];
+
+let installedModules = [...builtInModules];
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+async function init() {
+  setLoaderMsg('Initialisation du codec compilé…');
+  try {
+    codec = BPNoteCodec.fromCompiled();
+    fileIO = new BPNoteFileIO(codec);
+    await new Promise(r => setTimeout(r, 100));
+    document.getElementById('loader').classList.add('hidden');
+    document.getElementById('app').style.display = 'flex';
+    setupEvents();
+    render();
+  } catch (err) {
+    setLoaderMsg('Erreur : ' + err.message);
+    document.getElementById('loaderMsg').style.color = 'var(--err)';
+  }
+}
+
+function setLoaderMsg(msg) {
+  document.getElementById('loaderMsg').textContent = msg;
+}
+
+// ── Rendu global ─────────────────────────────────────────────────────────────
+function render() {
+  renderSidebar();
+  renderMain();
+  renderHex();
+}
+
+function getVisibleItems(collection) {
+  let items = (state[collection] || []).slice();
+  if (activeFileView !== SOURCE_MERGED) {
+    items = items.filter(i => (i._sourceFile || SOURCE_LOCAL) === activeFileView);
+  }
+  const query = String(searchQuery || '').trim().toLowerCase();
+  if (query) {
+    items = items.filter(i => itemMatches(collection, i, query));
+  }
+  items.sort((a, b) => compareItems(collection, a, b));
+  return items;
+}
+
+function itemMatches(collection, item, query) {
+  const match = value => String(value||'').toLowerCase().includes(query);
+  switch (collection) {
+    case 'tricks': return match(item.description) || match(item.id) || match(item._sourceFile);
+    case 'musicGenres': case 'musicParts': case 'artists': return match(item.name) || match(item.id) || match(item._sourceFile);
+    case 'sources': return match(item.title) || match(item.data) || match(item.type) || match(formatKeyLabel(item.key)) || match(item.bpm) || match(item.id) || match(item._sourceFile);
+    case 'trickMetadatas':
+      return match(resolveName(state.tricks, item.trickId, 'description')) ||
+             match(resolveName(state.musicGenres, item.musicGenreId, 'name')) ||
+             match(resolveName(state.musicParts, item.musicPartId, 'name')) ||
+             match(resolveName(state.artists, item.artistId, 'name')) ||
+             match(resolveSourceText(item.sourceId)) ||
+             match(item.timestamp) || match(item._sourceFile);
+  }
+  return false;
+}
+
+function compareItems(collection, a, b) {
+  const getValue = item => {
+    const value = (() => {
+      switch (collection) {
+        case 'tricks':
+          if (sortKey === 'text' || sortKey === 'description') return item.description || '';
+          return item.id || 0;
+        case 'musicGenres': case 'musicParts': case 'artists':
+          if (sortKey === 'text') return item.name || '';
+          if (sortKey === 'id') return item.id || 0;
+          return item.name || '';
+        case 'sources':
+          if (sortKey === 'type') return item.type || 0;
+          if (sortKey === 'title') return item.title || '';
+          if (sortKey === 'text' || sortKey === 'data') return item.data || '';
+          if (sortKey === 'bpm') return item.bpm || 0;
+          return item.id || 0;
+        case 'trickMetadatas':
+          if (sortKey === 'trick') return resolveName(state.tricks, item.trickId, 'description');
+          if (sortKey === 'genre') return resolveName(state.musicGenres, item.musicGenreId, 'name');
+          if (sortKey === 'part') return resolveName(state.musicParts, item.musicPartId, 'name');
+          if (sortKey === 'artist') return resolveName(state.artists, item.artistId, 'name');
+          if (sortKey === 'source') return resolveSourceText(item.sourceId);
+          if (sortKey === 'timestamp') return item.timestamp || 0;
+          return item.id || 0;
+      }
+    })();
+    return value;
+  };
+
+  const va = getValue(a);
+  const vb = getValue(b);
+  if (typeof va === 'number' && typeof vb === 'number') return sortDir * (va - vb);
+  return sortDir * String(va || '').localeCompare(String(vb || ''));
+}
+
+function resolveName(arr, id, field) {
+  const found = arr.find(x => x.id === id);
+  return found ? String(found[field] || '') : '';
+}
+
+function formatKeyLabel(key) {
+  if (!key || typeof key !== 'object') return '';
+  const tonic = TONIC_LABELS[key.tonic] || '';
+  const mode = MODE_LABELS[key.mode] || '';
+  return [tonic, mode].filter(Boolean).join(' - ');
+}
+
+function resolveSourceText(sourceId) {
+  const found = state.sources.find(x => x.id === sourceId);
+  if (!found) return '';
+  const parts = [`${SRC_LABELS[found.type] || '?'}`];
+  if (found.title) parts.push(found.title);
+  if (found.data) parts.push(found.data);
+  const keyLabel = formatKeyLabel(found.key);
+  if (keyLabel) parts.push(keyLabel);
+  if (found.bpm) parts.push(`${found.bpm} BPM`);
+  return parts.join(' — ');
+}
+
+function hasMultipleSources(items) {
+  return new Set(items.map(i => i._sourceFile || SOURCE_LOCAL)).size > 1;
+}
+
+function renderFileViewSelector() {
+  const sources = [{value: SOURCE_MERGED, label: 'Fusionné'}];
+  const names = new Set();
+  importedFiles.forEach(file => {
+    if (!names.has(file.name)) {
+      names.add(file.name);
+      sources.push({ value: file.name, label: file.name });
+    }
+  });
+  const hasLocal = Object.values(state).some(arr => Array.isArray(arr) && arr.some(item => !item._sourceFile));
+  if (hasLocal) sources.push({ value: SOURCE_LOCAL, label: SOURCE_LOCAL });
+  return `<select id="fileView" class="toolbar-select" onchange="setFileView(this.value)">${sources.map(s => `<option value="${e(s.value)}"${s.value===activeFileView?' selected':''}>${e(s.label)}</option>`).join('')}</select>`;
+}
+
+function setSearchQuery(value) {
+  searchQuery = value;
+  render();
+}
+
+function toggleSort(value) {
+  if (sortKey === value) {
+    sortDir = -sortDir;
+  } else {
+    sortDir = 1;
+    sortKey = value;
+  }
+  render();
+}
+
+function setSort(value) {
+  if (value.endsWith('_desc')) {
+    sortDir = -1;
+    sortKey = value.slice(0, -5);
+  } else {
+    sortDir = 1;
+    sortKey = value.replace('_asc', '');
+  }
+  render();
+}
+
+function sortHeader(label, key) {
+  const active = sortKey === key;
+  const arrow = active ? (sortDir === 1 ? ' ↑' : ' ↓') : '';
+  return `<span style="cursor:pointer;display:inline-flex;align-items:center;gap:4px" onclick="toggleSort('${key}')">${e(label)}<span style="font-size:12px;color:var(--t2)">${arrow}</span></span>`;
+}
+
+function clearFilters() {
+  searchQuery = '';
+  sortKey = 'id';
+  sortDir = 1;
+  activeFileView = SOURCE_MERGED;
+  render();
+}
+
+function setFileView(value) {
+  activeFileView = value;
+  render();
+}
+
+function openExternalLink(url) {
+  if (!url) return;
+  window.open(url, '_blank', 'noopener');
+}
+
+function renderMobileMenu() {
+  const actions = [
+    { label: 'Importer .bpnote', action: "document.getElementById('fileInBpnote').click()" },
+    { label: 'Exporter .bpnote', action: 'exportBpnote()' },
+    { label: 'Modules', action: 'openModules()' },
+  ];
+  const actionButtons = actions.map(i => `<button type="button" class="btn menu-button" onclick="${i.action}; toggleMobileMenu(false)">${e(i.label)}</button>`).join('');
+  const hexSize = document.getElementById('hexSz') ? document.getElementById('hexSz').textContent : '0 B';
+  const collectionButtons = TABS.map(t => `<button type="button" class="btn menu-button" onclick="openMobileTab('${e(t.id)}')">${e(t.label)} <span class="cnt">${state[t.id].length}</span></button>`).join('');
+  document.getElementById('mobileMenuContent').innerHTML = `
+    <div class="menu-group">
+      <div class="menu-status">Taille du fichier : <strong>${e(hexSize)}</strong></div>
+      <div class="menu-label">Actions</div>
+      ${actionButtons}
+    </div>
+    <div class="menu-group">
+      <div class="menu-label">Collections</div>
+      ${collectionButtons}
+    </div>`;
+}
+
+function toggleMobileMenu(show = null) {
+  const menu = document.getElementById('mobileMenu');
+  const active = menu.classList.contains('active');
+  if (show === null) show = !active;
+  if (show) renderMobileMenu();
+  menu.classList.toggle('active', show);
+}
+
+function openMobileTab(id) {
+  setTab(id);
+  toggleMobileMenu(false);
+}
+
+function buildSourceHeader(show) {
+  return show ? '<th>Fichier</th>' : '';
+}
+
+function buildSourceColumn(item, show) {
+  return show ? `<td>${e(item._sourceFile || SOURCE_LOCAL)}</td>` : '';
+}
+
+function buildSourceLinkButton(sourceId, sourceData, timestamp) {
+  if (!sourceData) return '';
+  const escaped = JSON.stringify(sourceData);
+  return `<button type="button" class="btn edit-b" onclick='openSourceLink(${escaped}, ${sourceId}, ${timestamp||0})' title="Ouvrir la source"><i class="ti ti-external-link"></i></button>`;
+}
+
+function openSourceLink(data, type, timestamp) {
+  let url = String(data || '').trim();
+  if (!url) return;
+  const kind = Number(type);
+  switch (kind) {
+    case 2:
+      url = `https://youtu.be/${encodeURIComponent(url)}`;
+      if (timestamp) url += `?t=${timestamp}`;
+      break;
+    case 3:
+      url = `https://music.youtube.com/watch?v=${encodeURIComponent(url)}`;
+      if (timestamp) url += `&t=${timestamp}`;
+      break;
+    default:
+      if (!/^https?:\/\//.test(url)) {
+        url = `https://${url}`;
+      }
+  }
+  openExternalLink(url);
+}
+
+function formatSourceLinkCell(sourceId, data, timestamp) {
+  return buildSourceLinkButton(sourceId, data, timestamp);
+}
+
+function exportCurrentViewAsCsv() {
+  const rows = [];
+  const items = getVisibleItems(activeTab);
+  if (!items.length) {
+    showModuleMessage('Aucune donnée visible à exporter.');
+    return;
+  }
+  const headers = [];
+  const lines = [];
+  switch (activeTab) {
+    case 'tricks':
+      headers.push('ID', 'Description', 'Fichier');
+      items.forEach(i => lines.push([i.id, i.description, i._sourceFile || SOURCE_LOCAL]));
+      break;
+    case 'musicGenres': case 'musicParts': case 'artists':
+      headers.push('ID', 'Nom', 'Fichier');
+      items.forEach(i => lines.push([i.id, i.name, i._sourceFile || SOURCE_LOCAL]));
+      break;
+    case 'sources':
+      headers.push('ID', 'Type', 'Titre', 'Données', 'Key', 'BPM', 'Fichier');
+      items.forEach(i => lines.push([i.id, SRC_LABELS[i.type] || i.type, i.title || '', i.data, formatKeyLabel(i.key), i.bpm||'', i._sourceFile || SOURCE_LOCAL]));
+      break;
+    case 'trickMetadatas':
+      headers.push('Trick', 'Genre', 'Partie', 'Artiste', 'Source', 'Timestamp', 'Fichier');
+      items.forEach(i => lines.push([
+        resolveName(state.tricks, i.trickId, 'description'),
+        resolveName(state.musicGenres, i.musicGenreId, 'name'),
+        resolveName(state.musicParts, i.musicPartId, 'name'),
+        resolveName(state.artists, i.artistId, 'name'),
+        resolveSourceText(i.sourceId),
+        i.timestamp || 0,
+        i._sourceFile || SOURCE_LOCAL,
+      ]));
+      break;
+  }
+  const csv = [headers.join(','), ...lines.map(row => row.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(','))].join('\r\n');
+  downloadBlob(`${activeTab}-${activeFileView||SOURCE_MERGED}.csv`, csv);
+}
+
+function downloadBlob(filename, content, type = 'text/csv;charset=utf-8;') {
+  const blob = new Blob([content], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function openModulePage(title, html) {
+  const page = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${e(title)}</title></head><body style="margin:0;background:#0f0f11;color:#e4e4f0;font-family:IBM Plex Sans,system-ui,sans-serif">${html}</body></html>`;
+  const blob = new Blob([page], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+}
+
+function runModule(id) {
+  const mod = installedModules.find(m => m.id === id);
+  if (!mod) return showModuleMessage('Module introuvable.');
+  try {
+    let html = null;
+    if (typeof mod.createPage === 'function') {
+      html = mod.createPage({ state, getVisibleItems, helpers: moduleHelpers });
+    } else if (typeof mod.renderPage === 'function') {
+      html = mod.renderPage({ state, getVisibleItems, helpers: moduleHelpers });
+    } else if (typeof mod.run === 'function') {
+      const result = mod.run({ state, getVisibleItems, helpers: moduleHelpers });
+      if (typeof result === 'string') html = result;
+    }
+
+    if (!html) {
+      return showModuleMessage('Ce module ne fournit pas de page web.');
+    }
+    openModulePage(mod.name, html);
+  } catch (err) {
+    showModuleMessage('Erreur module : ' + err.message);
+  }
+}
+
+function openModules() {
+  const modulesHtml = installedModules.map(mod => `
+    <div class="info-box" style="margin-bottom:10px">
+      <strong>${e(mod.name)}</strong>
+      <div style="font-size:12px;color:var(--t1);margin-top:4px">${e(mod.description)}</div>
+      <button class="btn primary" style="margin-top:8px" onclick="runModule('${e(mod.id)}')">Exécuter</button>
+    </div>
+  `).join('');
+  const body = `
+    <div class="info-box">Les modules peuvent accéder aux données visibles et générer des exportations ou actions personnalisées.</div>
+    ${modulesHtml}
+    <div class="field"><label>Installer un module local (.js)</label><input type="file" id="moduleFileInput" accept=".js"></div>
+  `;
+  openModal('Modules', body, () => {});
+  document.getElementById('mSave').style.display = 'none';
+  document.getElementById('moduleFileInput').addEventListener('change', ev => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    installModuleFromFile(file);
+    ev.target.value = '';
+  });
+}
+
+function showModuleMessage(msg) {
+  alert(msg);
+}
+
+function installModuleFromFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const source = e.target.result;
+      const module = { exports: {} };
+      const fn = new Function('module', 'exports', 'state', 'helpers', source);
+      fn(module, module.exports, state, moduleHelpers);
+      const mod = module.exports;
+      if (!mod || !mod.id || !mod.name || !(typeof mod.createPage === 'function' || typeof mod.renderPage === 'function' || typeof mod.run === 'function')) {
+        throw new Error('Le module doit exporter {id, name} et createPage, renderPage ou run.');
+      }
+      installedModules.push(mod);
+      showModuleMessage('Module installé : ' + mod.name);
+      openModules();
+    } catch (err) {
+      alert('Impossible d’installer le module : ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function renderSidebar() {
+  const nav = document.getElementById('sidebar');
+  nav.innerHTML = '<div class="nav-label">Collections</div>' +
+    TABS.map(t => `
+      <button class="${t.id===activeTab?'active':''}" onclick="setTab('${t.id}')">
+        <span style="display:flex;align-items:center;gap:6px">
+          <i class="ti ${t.icon}" aria-hidden="true"></i>${t.label}
+        </span>
+        <span class="cnt">${state[t.id].length}</span>
+      </button>`
+    ).join('');
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+function renderMain() {
+  const focused = document.activeElement;
+  const selection = focused && focused.id === 'searchInput' ? { start: focused.selectionStart, end: focused.selectionEnd } : null;
+  const el = document.getElementById('main');
+  const tab = TABS.find(t => t.id === activeTab);
+  const items = getVisibleItems(activeTab);
+  const showSource = activeFileView === SOURCE_MERGED && hasMultipleSources(items);
+
+  const toolbarHtml = `<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">
+      <input id="searchInput" type="search" placeholder="Rechercher..." value="${e(searchQuery)}" oninput="setSearchQuery(this.value)" style="flex:1;min-width:180px;padding:8px 10px;border-radius:8px;border:1px solid var(--br2);background:var(--bg2);color:var(--t0)">
+      <button class="btn clear" onclick="clearFilters()">Effacer</button>
+      ${renderFileViewSelector()}
+    </div>`;
+
+  let tableHtml = '';
+  if (activeTab === 'tricks') {
+    tableHtml = `<table>
+      <thead><tr><th>${sortHeader('ID', 'id')}</th><th>${sortHeader('Description', 'description')}</th>${buildSourceHeader(showSource)}<th style="width:80px"></th></tr></thead>
+      <tbody>${items.length ? items.map(i => `<tr>
+        <td style="color:var(--t2);width:50px">#${i.id}</td>
+        <td>${e(i.description)}</td>
+        ${buildSourceColumn(i, showSource)}
+        <td style="white-space:nowrap">
+          <button class="btn edit-b" onclick="openEdit('${i._uid}')"><i class="ti ti-pencil"></i></button>
+          <button class="btn danger" onclick="del('${i._uid}')"><i class="ti ti-trash"></i></button>
+        </td>
+      </tr>`).join('') : emptyRow(showSource ? 4 : 3)}</tbody></table>`;
+  }
+  else if (['musicGenres','musicParts','artists'].includes(activeTab)) {
+    tableHtml = `<table>
+      <thead><tr><th>${sortHeader('ID', 'id')}</th><th>${sortHeader('Nom', 'text')}</th>${buildSourceHeader(showSource)}<th style="width:80px"></th></tr></thead>
+      <tbody>${items.length ? items.map(i => `<tr>
+        <td style="color:var(--t2);width:50px">#${i.id}</td>
+        <td>${e(i.name)}</td>
+        ${buildSourceColumn(i, showSource)}
+        <td style="white-space:nowrap">
+          <button class="btn edit-b" onclick="openEdit('${i._uid}')"><i class="ti ti-pencil"></i></button>
+          <button class="btn danger" onclick="del('${i._uid}')"><i class="ti ti-trash"></i></button>
+        </td>
+      </tr>`).join('') : emptyRow(showSource ? 4 : 3)}</tbody></table>`;
+  }
+  else if (activeTab === 'sources') {
+    tableHtml = `<table>
+      <thead><tr><th>${sortHeader('ID', 'id')}</th><th>${sortHeader('Type', 'type')}</th><th>${sortHeader('Titre', 'title')}</th><th>Lien</th><th>${sortHeader('Données', 'data')}</th><th>Key</th><th>${sortHeader('BPM', 'bpm')}</th>${buildSourceHeader(showSource)}<th style="width:80px"></th></tr></thead>
+      <tbody>${items.length ? items.map(i => `<tr>
+        <td style="color:var(--t2);width:50px">#${i.id}</td>
+        <td><span class="badge ${SRC_BADGE[i.type]||'url'}">${SRC_LABELS[i.type]||'?'}</span></td>
+        <td>${e(i.title)}</td>
+        <td style="white-space:nowrap">${buildSourceLinkButton(i.type, i.data, 0)}</td>
+        <td>${e(i.data)}</td>
+        <td>${e(formatKeyLabel(i.key))}</td>
+        <td>${i.bpm||''}</td>
+        ${buildSourceColumn(i, showSource)}
+        <td style="white-space:nowrap">
+          <button class="btn edit-b" onclick="openEdit('${i._uid}')"><i class="ti ti-pencil"></i></button>
+          <button class="btn danger" onclick="del('${i._uid}')"><i class="ti ti-trash"></i></button>
+        </td>
+      </tr>`).join('') : emptyRow(showSource ? 8 : 7)}</tbody></table>`;
+  }
+  else if (activeTab === 'trickMetadatas') {
+    const resolve = (arr, id, field) => { const f = arr.find(x=>x.id===id); return f ? e(f[field]||'') : `<span style="color:var(--t2)">#${id}</span>`; };
+    tableHtml = `<table>
+      <thead><tr><th>${sortHeader('Trick', 'trick')}</th><th>${sortHeader('Genre', 'genre')}</th><th>${sortHeader('Partie', 'part')}</th><th>${sortHeader('Artiste', 'artist')}</th><th>Lien</th><th>${sortHeader('Source', 'source')}</th><th>${sortHeader('Temps', 'timestamp')}</th>${buildSourceHeader(showSource)}<th style="width:80px"></th></tr></thead>
+      <tbody>${items.length ? items.map(i => {
+        const sourceItem = state.sources.find(s => s.id === i.sourceId) || {};
+        return `<tr>
+          <td>${resolve(state.tricks, i.trickId,'description')}</td>
+          <td>${resolve(state.musicGenres, i.musicGenreId,'name')}</td>
+          <td>${resolve(state.musicParts, i.musicPartId,'name')}</td>
+          <td>${resolve(state.artists, i.artistId,'name')}</td>
+          <td style="white-space:nowrap">${buildSourceLinkButton(sourceItem.type, sourceItem.data, i.timestamp)}</td>
+          <td>${resolveName(state.sources, i.sourceId, 'data')}</td>
+          <td style="color:var(--t2);font-family:var(--mono)">${fmtTime(i.timestamp)}</td>
+          ${buildSourceColumn(i, showSource)}
+          <td style="white-space:nowrap">
+            <button class="btn edit-b" onclick="openEditMeta('${i._uid}')"><i class="ti ti-pencil"></i></button>
+            <button class="btn danger" onclick="delMeta('${i._uid}')"><i class="ti ti-trash"></i></button>
+          </td>
+        </tr>`;
+      }).join('') : emptyRow(showSource ? 9 : 8)}</tbody></table>`;
+  }
+
+  el.innerHTML = `<div class="card">
+    <div class="card-header">
+      <span class="card-title"><i class="ti ${tab.icon}" aria-hidden="true"></i> ${tab.label}</span>
+      <button class="btn primary" onclick="openAdd()"><i class="ti ti-plus"></i> Ajouter</button>
+    </div>
+    ${toolbarHtml}
+    ${tableHtml}
+  </div>`;
+
+  if (selection) {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.focus();
+      searchInput.setSelectionRange(selection.start, selection.end);
+    }
+  }
+}
+
+function emptyRow(cols) {
+  return `<tr><td colspan="${cols}" class="empty-state"><i class="ti ti-inbox"></i>Aucun élément</td></tr>`;
+}
+
+function fmtTime(s) {
+  if (!s) return '0:00';
+  const m = Math.floor(s/60), sec = s%60;
+  return `${m}:${String(sec).padStart(2,'0')}`;
+}
+
+// ── Hex dump ──────────────────────────────────────────────────────────────────
+function renderHex() {
+  const panel = document.getElementById('hexPanel');
+  let bytes;
+  try { bytes = codec.encode(stateForCodec()); } catch { bytes = new Uint8Array(0); }
+
+  document.getElementById('hexSz').textContent = fmtBytes(bytes.length);
+  if (panel.style.display === 'none') return;
+
+  const rows = [];
+  for (let i = 0; i < bytes.length; i += 16) {
+    const chunk = bytes.slice(i, i + 16);
+    const hex   = Array.from(chunk).map(b => b.toString(16).padStart(2,'0')).join(' ');
+    const asc   = Array.from(chunk).map(b => (b>=32&&b<127)?String.fromCharCode(b):'.').join('');
+    rows.push(`<div class="hexrow">
+      <span class="addr">${i.toString(16).padStart(4,'0')}</span>
+      <span class="data">${hex}</span>
+      <span class="asc">${e(asc)}</span>
+    </div>`);
+  }
+  panel.innerHTML = rows.length ? rows.join('') : '<div style="color:var(--t2);font-size:12px">— vide —</div>';
+}
+
+function fmtBytes(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1048576) return (n/1024).toFixed(1) + ' KB';
+  return (n/1048576).toFixed(2) + ' MB';
+}
+
+// ── Conversion état → codec ───────────────────────────────────────────────────
+// Retire les champs UI (_uid) avant d'envoyer au codec protobuf
+function stateForCodec() {
+  return {
+    version:        STANDARD_VERSION,
+    tricks:         state.tricks,
+    musicGenres:    state.musicGenres,
+    musicParts:     state.musicParts,
+    artists:        state.artists,
+    sources:        state.sources,
+    trickMetadatas: state.trickMetadatas.map(({ _uid, ...rest }) => ({
+      trickId:      rest.trickId || 0,
+      musicGenreId: rest.musicGenreId || 0,
+      musicPartId:  rest.musicPartId || 0,
+      artistId:     rest.artistId || 0,
+      sourceId:     rest.sourceId || 0,
+      timestamp:    Number(rest.timestamp) || 0,
+    })),
+    author:         state.author || '',
+  };
+}
+
+// ── Formulaires modales ────────────────────────────────────────────────────────
+function selOpts(arr, field='name') {
+  return `<option value="0">— Aucun —</option>` +
+    arr.map(i=>`<option value="${i.id}">${e(i[field]||i.description||'')} (#${i.id})</option>`).join('');
+}
+
+function buildForm(entity, data={}) {
+  if (entity === 'tricks') return `
+    <div class="field"><label>Description</label>
+    <textarea id="f_desc" rows="3" style="resize:vertical">${e(data.description||'')}</textarea></div>`;
+
+  if (['musicGenres','musicParts','artists'].includes(entity)) return `
+    <div class="field"><label>Nom</label>
+    <input id="f_name" value="${e(data.name||'')}"></div>`;
+
+  if (entity === 'sources') return `
+    <div class="field"><label>Type</label><select id="f_type">
+      <option value="1"${data.type===1?' selected':''}>URL</option>
+      <option value="2"${data.type===2?' selected':''}>YouTube</option>
+      <option value="3"${data.type===3?' selected':''}>YouTube Music</option>
+    </select></div>
+    <div class="field"><label>Titre</label>
+    <input id="f_title" value="${e(data.title||'')}"></div>
+    <div class="field"><label>URL / Données</label>
+    <input id="f_data" value="${e(data.data||'')}"></div>
+    <div class="field"><label>Key</label>
+      <div style="display:flex;gap:8px">
+        <select id="f_key_tonic" style="flex:1">
+          <option value="">— Aucune —</option>
+          ${Object.entries(TONIC_LABELS).map(([k,v])=>`<option value="${k}"${data.key?.tonic===Number(k)?' selected':''}>${e(v)}</option>`).join('')}
+        </select>
+        <select id="f_key_mode" style="flex:1">
+          <option value="">— Aucune —</option>
+          ${Object.entries(MODE_LABELS).map(([k,v])=>`<option value="${k}"${data.key?.mode===Number(k)?' selected':''}>${e(v)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>BPM</label>
+    <input type="number" id="f_bpm" min="0" value="${data.bpm||''}"></div>`;
+
+  if (entity === 'trickMetadatas') return `
+    <div class="info-box"><i class="ti ti-info-circle"></i> ID 0 = non lié</div>
+    <div class="field"><label>Trick</label>
+    <select id="f_tid"><option value="0">— Aucun —</option>
+    ${state.tricks.map(t=>`<option value="${t.id}"${data.trickId===t.id?' selected':''}>${e(t.description)} (#${t.id})</option>`).join('')}</select></div>
+    <div class="field"><label>Genre musical</label>
+    <select id="f_gid"><option value="0">— Aucun —</option>
+    ${state.musicGenres.map(t=>`<option value="${t.id}"${data.musicGenreId===t.id?' selected':''}>${e(t.name)} (#${t.id})</option>`).join('')}</select></div>
+    <div class="field"><label>Partie musicale</label>
+    <select id="f_pid"><option value="0">— Aucun —</option>
+    ${state.musicParts.map(t=>`<option value="${t.id}"${data.musicPartId===t.id?' selected':''}>${e(t.name)} (#${t.id})</option>`).join('')}</select></div>
+    <div class="field"><label>Artiste</label>
+    <select id="f_aid"><option value="0">— Aucun —</option>
+    ${state.artists.map(t=>`<option value="${t.id}"${data.artistId===t.id?' selected':''}>${e(t.name)} (#${t.id})</option>`).join('')}</select></div>
+    <div class="field"><label>Source</label>
+    <select id="f_sid"><option value="0">— Aucune —</option>
+    ${state.sources.map(t=>`<option value="${t.id}"${data.sourceId===t.id?' selected':''}>${SRC_LABELS[t.type]} — ${e(t.data)} (#${t.id})</option>`).join('')}</select></div>
+    <div class="field"><label>Timestamp (secondes)</label>
+    <input type="number" id="f_ts" value="${data.timestamp||0}"></div>`;
+
+  return '';
+}
+
+function readForm(entity) {
+  const g = id => document.getElementById(id);
+  if (entity === 'tricks')       return { description: g('f_desc').value };
+  if (['musicGenres','musicParts','artists'].includes(entity)) return { name: g('f_name').value };
+  if (entity === 'sources') {
+    const tonic = g('f_key_tonic').value;
+    const mode = g('f_key_mode').value;
+    const key = tonic !== '' && mode !== '' ? { tonic: Number(tonic), mode: Number(mode) } : undefined;
+    return {
+      type: Number(g('f_type').value), title: g('f_title').value, data: g('f_data').value,
+      key,
+      bpm: Number(g('f_bpm').value) || 0,
+    };
+  }
+  if (entity === 'trickMetadatas') return {
+    trickId: Number(g('f_tid').value), musicGenreId: Number(g('f_gid').value),
+    musicPartId: Number(g('f_pid').value), artistId: Number(g('f_aid').value),
+    sourceId: Number(g('f_sid').value), timestamp: Number(g('f_ts').value),
+  };
+  return {};
+}
+
+// ── Modal générique ───────────────────────────────────────────────────────────
+function openModal(title, body, onSave) {
+  document.getElementById('mTitle').textContent = title;
+  document.getElementById('mBody').innerHTML = body;
+  document.getElementById('mSave').onclick = onSave;
+  document.getElementById('modalWrap').style.display = '';
+  document.getElementById('mClose').onclick = closeModal;
+  document.getElementById('mCancel').onclick = closeModal;
+}
+function closeModal() { document.getElementById('modalWrap').style.display = 'none'; }
+
+function openAdd() {
+  const entity = activeTab;
+  const label = TABS.find(t=>t.id===entity).label;
+  openModal('Ajouter — ' + label, buildForm(entity), () => {
+    const item = readForm(entity);
+    item.id = nextId(state[entity]);
+    item._uid = String(uidCtr++);
+    item._sourceFile = SOURCE_LOCAL;
+    state[entity].push(item);
+    closeModal(); render();
+  });
+}
+
+function openEdit(uid) {
+  const entity = activeTab;
+  const item = state[entity].find(i=>i._uid===uid);
+  if (!item) return;
+  const label = TABS.find(t=>t.id===entity).label;
+  openModal('Éditer — ' + label, buildForm(entity, item), () => {
+    const upd = readForm(entity);
+    upd.id = item.id;
+    upd._uid = item._uid;
+    upd._sourceFile = item._sourceFile;
+    state[entity] = state[entity].map(i=>i._uid===uid ? upd : i);
+    closeModal(); render();
+  });
+}
+
+function openEditMeta(uid) {
+  const item = state.trickMetadatas.find(i=>i._uid===uid);
+  if (!item) return;
+  openModal('Éditer — Métadonnée', buildForm('trickMetadatas', item), () => {
+    const upd = readForm('trickMetadatas');
+    upd._uid = uid; upd.id = item.id || 0;
+    state.trickMetadatas = state.trickMetadatas.map(i=>i._uid===uid ? upd : i);
+    closeModal(); render();
+  });
+}
+
+function del(uid) {
+  if (!confirm('Supprimer ?')) return;
+  state[activeTab] = state[activeTab].filter(i=>i._uid!==uid);
+  render();
+}
+function delMeta(uid) {
+  if (!confirm('Supprimer cette métadonnée ?')) return;
+  state.trickMetadatas = state.trickMetadatas.filter(i=>i._uid!==uid);
+  render();
+}
+
+function setTab(id) { activeTab = id; renderSidebar(); renderMain(); }
+
+// ── Modal proto ───────────────────────────────────────────────────────────────
+// proto editor removed: functions openProtoModal/closeProtoModal/applyProto deleted
+
+// ── Import / export .bpnote ──────────────────────────────────────────────────
+function importBpnote(bytes, fileName = 'Fichier bpnote', merge = true) {
+  try {
+    const imported = fileIO.import(bytes, fileName);
+    if (!merge || !state._files.length) {
+      state = {
+        ...imported,
+        _files: [{ name: fileName, version: imported.version }],
+      };
+    } else {
+      state.tricks = state.tricks.concat(imported.tricks);
+      state.musicGenres = state.musicGenres.concat(imported.musicGenres);
+      state.musicParts = state.musicParts.concat(imported.musicParts);
+      state.artists = state.artists.concat(imported.artists);
+      state.sources = state.sources.concat(imported.sources);
+      state.trickMetadatas = state.trickMetadatas.concat(imported.trickMetadatas);
+      state._files = state._files.concat({ name: fileName, version: imported.version });
+    }
+    if (!importedFiles.some(f => f.name === fileName)) importedFiles.push({ name: fileName, version: imported.version });
+    activeFileView = SOURCE_MERGED;
+    render();
+  } catch(err) {
+    alert('Erreur de décodage : ' + err.message);
+  }
+}
+
+function exportBpnote() {
+  try {
+    fileIO.download(stateForCodec());
+  } catch(err) {
+    alert('Erreur d\'export : ' + err.message);
+  }
+}
+
+// ── Events ────────────────────────────────────────────────────────────────────
+function setupEvents() {
+  // version
+  // hex toggle
+  document.getElementById('hexBtn').addEventListener('click', () => {
+    const p = document.getElementById('hexPanel');
+    p.style.display = p.style.display === 'none' ? '' : 'none';
+    renderHex();
+  });
+
+  // export
+  document.getElementById('exportBtn').addEventListener('click', exportBpnote);
+
+  // import bpnote
+  document.getElementById('importBpnote').addEventListener('click', () => document.getElementById('fileInBpnote').click());
+  document.getElementById('fileInBpnote').addEventListener('change', ev => {
+    const files = Array.from(ev.target.files || []);
+    if (!files.length) return;
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = e => importBpnote(new Uint8Array(e.target.result), file.name);
+      reader.readAsArrayBuffer(file);
+    });
+    ev.target.value = '';
+  });
+
+  document.getElementById('modulesBtn').addEventListener('click', openModules);
+
+  // proto editor removed: no listeners
+
+  // Drag & drop global
+  document.addEventListener('dragover', ev => { ev.preventDefault(); document.getElementById('dropzone').classList.add('active'); });
+  document.addEventListener('dragleave', ev => { if (!ev.relatedTarget) document.getElementById('dropzone').classList.remove('active'); });
+  document.addEventListener('drop', ev => {
+    ev.preventDefault();
+    document.getElementById('dropzone').classList.remove('active');
+    const files = Array.from(ev.dataTransfer.files || []);
+    if (!files.length) return;
+    files.forEach(file => {
+      if (!file.name.endsWith('.bpnote')) {
+        return alert('Format non reconnu. Déposez un fichier .bpnote.');
+      }
+      const reader = new FileReader();
+      reader.onload = e => importBpnote(new Uint8Array(e.target.result), file.name);
+      reader.readAsArrayBuffer(file);
+    });
+  });
+}
+
+// ── Démarrage ─────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

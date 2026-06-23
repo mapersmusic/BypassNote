@@ -1,0 +1,19 @@
+{
+  "name": "bypass-note",
+  "version": "0.1.0",
+  "scripts": {
+    "proto:js": "pbjs -t static-module -w closure -o www/bpnote_pb.js bpnote_file/bpnote_0_1.proto",
+    "proto:ts": "pbts -o www/bpnote_pb.d.ts www/bpnote_pb.js",
+    "build-proto": "npm run proto:js && npm run proto:ts"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "protobufjs": "^8.4.2",
+    "protobufjs-cli": "^2.4.2"
+  }
+}

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BypassNote</title>
+    <meta http-equiv="refresh" content="0;url=BypassNote.html">
+    <!-- Tabler Icons local -->
+    <link rel="stylesheet" href="tabler-icons.min.css">
+    
+    <style>
+        /* ── Reset & tokens ─────────────────────────────────────────────────────────── */
+        *{box-sizing:border-box;margin:0;padding:0}
+
+        :root{
+          --bg0:#0f0f11;--bg1:#18181b;--bg2:#1e1e23;--bg3:#27272d;
+          --br:#2e2e36;--br2:#3a3a44;
+          --t0:#e4e4f0;--t1:#a1a1b5;--t2:#6b6b7e;
+          --acc:#6c63ff;--acc2:#4f46e5;--acc-t:rgba(108,99,255,.15);
+          --ok:#22c55e;--warn:#f59e0b;--err:#ef4444;--yt:#dc2626;--ytm:#d97706;
+          --mono:'JetBrains Mono',monospace;
+          --r:6px;--r2:10px;
+          font-family:'IBM Plex Sans',system-ui,sans-serif;
+        }
+
+        body{background:var(--bg0);color:var(--t0);font-size:14px;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+
+        .container{text-align:center;background:var(--bg1);border:1px solid var(--br2);border-radius:var(--r2);padding:60px 40px;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+
+        .logo{color:var(--acc);font-size:48px;margin-bottom:20px}
+
+        h1{font-size:24px;font-weight:600;margin-bottom:12px;letter-spacing:-.3px}
+
+        p{color:var(--t1);font-size:13px;line-height:1.6;margin-bottom:20px}
+
+        .spin{width:36px;height:36px;border:3px solid var(--br2);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 24px}
+
+        @keyframes spin{to{transform:rotate(360deg)}}
+
+        a{color:var(--acc);text-decoration:none;font-weight:500;transition:color .15s}
+        a:hover{color:var(--acc2)}
+
+        .divider{display:flex;align-items:center;gap:8px;margin:20px 0;color:var(--t2);font-size:12px}
+        .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--br)}
+    </style>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <i class="ti ti-music-bolt logo" aria-hidden="true"></i>
+        <h1>BypassNote</h1>
+        <div class="spin"></div>
+        <p>Redirection en cours vers l'application…</p>
+        <div class="divider">ou</div>
+        <p><a href="BypassNote.html">Accéder directement à BypassNote</a></p>
+    </div>
+</body>
+</html>

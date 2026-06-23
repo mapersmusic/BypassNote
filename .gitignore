@@ -1,0 +1,13 @@
+node_modules/
+scripts/
+android/
+icons/
+package-lock.json
+bpnote_pb.js
+bpnote_pb.d.ts
+TODO
+
+# Security - never commit keystores
+*.keystore
+android/release.keystore
+android/debug.keystore
