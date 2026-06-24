@@ -1,6 +1,7 @@
 /* BPNoteFileIO: helper for importing and exporting BPNote files.
    This class isolates the conversion logic from the UI in BypassNote.html.
 */
+
 class BPNoteFileIO {
   constructor(codec) {
     this.codec = codec;
@@ -42,13 +43,31 @@ class BPNoteFileIO {
     return this.encode(payload);
   }
 
-  download(payload, filename = 'export.bpnote') {
+  async download(payload, filename = 'export.bpnote') {
     const bytes = this.export(payload);
-    const blob = new Blob([bytes], { type: 'application/octet-stream' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    const isNative = window.capacitorExports
+      && window.capacitorExports.Capacitor
+      && window.capacitorExports.Capacitor.isNativePlatform();
+
+    if(isNative) {
+      const { Filesystem, Directory } = window.capacitorFilesystemPluginCapacitor;
+      const { Share } = window.capacitorShare;
+
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes)));
+      const result = await Filesystem.writeFile({
+        path: filename,
+        data: base64,
+        directory: Directory.Cache,
+      });
+
+      await Share.share({ title: filename, url: result.uri });
+    } else {
+      const blob = new Blob([bytes], { type: 'application/octet-stream' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
   }
 }
