@@ -12,13 +12,20 @@
 
 ![BypassNote UI](BypassNoteDesktop.png)
 
-## Build app for android
+## Build web app
 
 ```sh
 npm install
 
 npm run build-proto
+```
 
+## Build app for android
+
+> [!Important] 
+> the android app is built from the web app. so, you need to build it before the android app
+
+```sh
 npx cap add android
 
 npx cap sync
