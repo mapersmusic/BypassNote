@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    environment: Production
+    environment: ${{ startsWith(github.ref, 'refs/tags/') && 'Production' || 'Development' }}
 
     steps:
       - name: Checkout repository
@@ -58,29 +58,72 @@ jobs:
           fi
         shell: bash
 
-      - name: Decode and write release keystore
+      - name: Decode and write keystore
         run: |
-          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > android/release.keystore
+          if [ "${{ startsWith(github.ref, 'refs/tags/') }}" = "true" ]; then
+            echo "Using production keystore"
+            echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > android/release.keystore
+          else
+            echo "Using development keystore"
+            echo "${{ secrets.DEV_KEYSTORE_BASE64 }}" | base64 -d > android/release.keystore
+          fi
         shell: bash
 
       - name: Configure capacitor signing config
         run: |
           node -e "
           const fs = require('fs');
-          const config = JSON.parse(fs.readFileSync('capacitor.config.json', 'utf8'));
+          const path = require('path');
+          const cfgPath = 'capacitor.config.json';
+          const config = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
           config.android = config.android || {};
+          const isTag = '${{ startsWith(github.ref, 'refs/tags/') }}' === 'true';
+          const keystorePath = path.resolve('android', 'release.keystore');
+          const keystorePassword = isTag ? process.env.RELEASE_KEYSTORE_PASSWORD : process.env.DEV_KEYSTORE_PASSWORD;
+          const keystoreAlias = isTag ? process.env.RELEASE_KEYSTORE_ALIAS : process.env.DEV_KEYSTORE_ALIAS;
+          const keystoreAliasPassword = isTag ? process.env.RELEASE_KEYSTORE_ALIAS_PASSWORD : process.env.DEV_KEYSTORE_ALIAS_PASSWORD;
+          
+          if (!fs.existsSync(keystorePath)) {
+            console.error('Keystore file not found at', keystorePath);
+            process.exit(1);
+          }
+          if (!keystorePassword || !keystoreAlias || !keystoreAliasPassword) {
+            console.error('Missing keystore credentials. Please set the appropriate secrets for ' + (isTag ? 'release' : 'dev') + ' signing.');
+            process.exit(1);
+          }
+          
           config.android.buildOptions = {
-            keystorePath: './release.keystore',
-            keystorePassword: process.env.KEYSTORE_PASSWORD,
-            keystoreAlias: process.env.KEYSTORE_ALIAS,
-            keystoreAliasPassword: process.env.KEYSTORE_ALIAS_PASSWORD
+            keystorePath: keystorePath,
+            keystorePassword: keystorePassword,
+            keystoreAlias: keystoreAlias,
+            keystoreAliasPassword: keystoreAliasPassword,
+            keyAlias: keystoreAlias,
+            keyPassword: keystoreAliasPassword
           };
-          fs.writeFileSync('capacitor.config.json', JSON.stringify(config, null, 2));
+          
+          fs.writeFileSync(cfgPath, JSON.stringify(config, null, 2));
+          console.log('Wrote android.buildOptions with keystorePath =', keystorePath);
           "
         env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
-          KEYSTORE_ALIAS_PASSWORD: ${{ secrets.KEYSTORE_ALIAS_PASSWORD }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEYSTORE_ALIAS: ${{ secrets.RELEASE_KEYSTORE_ALIAS }}
+          RELEASE_KEYSTORE_ALIAS_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_ALIAS_PASSWORD }}
+          DEV_KEYSTORE_PASSWORD: ${{ secrets.DEV_KEYSTORE_PASSWORD }}
+          DEV_KEYSTORE_ALIAS: ${{ secrets.DEV_KEYSTORE_ALIAS }}
+          DEV_KEYSTORE_ALIAS_PASSWORD: ${{ secrets.DEV_KEYSTORE_ALIAS_PASSWORD }}
+
+      - name: Show generated capacitor android buildOptions (masked)
+        run: |
+          node -e "
+          const fs = require('fs');
+          const cfg = JSON.parse(fs.readFileSync('capacitor.config.json','utf8'));
+          const b = (cfg.android && cfg.android.buildOptions) || {};
+          console.log('keystorePath:', b.keystorePath);
+          console.log('keystorePassword:', b.keystorePassword ? '<present>' : '<missing>');
+          console.log('keystoreAlias:', b.keystoreAlias || '<missing>');
+          console.log('keyAlias:', b.keyAlias || '<missing>');
+          "
+        shell: bash
 
       - name: Sync Capacitor to Android
         run: npx cap sync android
@@ -123,35 +166,45 @@ jobs:
       - name: Build Android release with Capacitor
         run: npx cap build android --androidreleasetype APK --signing-type apksigner
 
-      - name: Verify signed APK
+      - name: Rename signed APK for consistency
         run: |
-          find android/app/build/outputs/apk -type f -name '*-signed.apk' | sort > signed_apks.txt
-          if [ ! -s signed_apks.txt ]; then
-            echo "No signed APK found" >&2
+          SIGNED_APK=$(find android/app/build/outputs/apk -type f -name '*-signed.apk' | head -n 1)
+          if [ -n "$SIGNED_APK" ]; then
+            cp "$SIGNED_APK" android/app/build/outputs/apk/bypassnote-release-signed.apk
+            echo "Renamed signed APK to bypassnote-release-signed.apk"
+          else
+            echo "No signed APK found to rename" >&2
             exit 1
           fi
-          while IFS= read -r apk; do
-            echo "Verifying $apk"
-            apksigner verify "$apk"
-          done < signed_apks.txt
         shell: bash
 
-      - name: List signed APK outputs
+      - name: Verify signed APK
         run: |
-          echo "=== Signed APK files ==="
-          find android/app/build/outputs/apk -type f -name '*-signed.apk' | sort || true
+          APK_PATH="android/app/build/outputs/apk/bypassnote-release-signed.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "No signed APK found at $APK_PATH" >&2
+            exit 1
+          fi
+          echo "Verifying $APK_PATH"
+          apksigner verify "$APK_PATH"
+        shell: bash
+
+      - name: List APK outputs
+        run: |
+          echo "=== APK files ==="
+          find android/app/build/outputs/apk -type f -name "*.apk" | sort || true
         shell: bash
 
       - name: Upload signed release APK
         uses: actions/upload-artifact@v4
         with:
           name: bypassnote-release-apk
-          path: android/app/build/outputs/apk/**/*-signed.apk
+          path: android/app/build/outputs/apk/bypassnote-release-signed.apk
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: android/app/build/outputs/apk/**/*-signed.apk
+          files: android/app/build/outputs/apk/bypassnote-release-signed.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
