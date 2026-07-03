@@ -43,9 +43,13 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties', 'android/build.gradle', 'android/app/build.gradle') }}
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties', 'android/build.gradle', 'android/app/build.gradle', 'capacitor.config.json') }}
           restore-keys: |
             gradle-${{ runner.os }}-
+
+      - name: Clean Android platform
+        run: rm -rf android
+        shell: bash
 
       - name: Ensure Android platform exists
         run: |
