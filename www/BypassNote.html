@@ -22,6 +22,7 @@
 <script src="bpnote_codec.js"></script>
 <script src="bpnote-file-io.js"></script>
 <!-- Tabler Icons local -->
+<script src="https://cdn.jsdelivr.net/npm/tap-tempo@1.0.0/dist/tap-tempo.min.js"></script>
 <link rel="stylesheet" href="tabler-icons.min.css">
 
 <style>
@@ -1008,7 +1009,13 @@ function buildForm(entity, data={}) {
       </div>
     </div>
     <div class="field"><label>BPM</label>
-    <input type="number" id="f_bpm" min="0" value="${data.bpm||''}"></div>`;
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <input type="number" id="f_bpm" min="0" value="${data.bpm||''}" style="flex: 1;">
+      <button type="button" id="tapTempoBtn" class="btn" style="padding: 6px 12px; font-size: 12px; white-space: nowrap;">
+        <i data-lucide="metronome"></i> Tap Tempo
+      </button>
+    </div>
+  </div>`;
 
   if (entity === 'trickMetadatas') return `
     <div class="info-box"><i class="ti ti-info-circle"></i> ID 0 = non lié</div>
@@ -1206,6 +1213,55 @@ function setupEvents() {
 
 // ── Démarrage ─────────────────────────────────────────────────────────────────
 init();
+
+
+  // ========== Tap Tempo Implementation ==========
+  // Initialize TapTempo only when the modal is opened
+  let tapTempoInstance = null;
+  let tapTempoBtn = null;
+
+  function initTapTempo() {
+    if (tapTempoInstance || !document.getElementById('tapTempoBtn')) return;
+    
+    tapTempoInstance = new TapTempo();
+    tapTempoBtn = document.getElementById('tapTempoBtn');
+    const bpmInput = document.getElementById('f_bpm');
+
+    if (!bpmInput) return;
+
+    // Update BPM input when tempo is calculated
+    tapTempoInstance.on('bpm', (bpm) => {
+      bpmInput.value = Math.round(bpm);
+      bpmInput.dispatchEvent(new Event('input'));
+      bpmInput.dispatchEvent(new Event('change'));
+    });
+
+    // Tap on button click
+    tapTempoBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      tapTempoInstance.tap();
+    });
+
+    // Tap on space/enter key (only when modal is open)
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'Enter') {
+        // Only trigger if we're in a modal context (simple check)
+        if (document.getElementById('modalDialog')?.offsetParent !== null) {
+          e.preventDefault();
+          tapTempoInstance.tap();
+        }
+      }
+    });
+  }
+
+  // Hook into modal open to initialize TapTempo
+  const originalOpenModal = window.openModal;
+  window.openModal = function(title, body, onSave) {
+    const result = originalOpenModal.apply(this, arguments);
+    // Small delay to ensure DOM is rendered
+    setTimeout(initTapTempo, 50);
+    return result;
+  };
 </script>
 </body>
 </html>
