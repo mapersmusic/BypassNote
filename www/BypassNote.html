@@ -22,7 +22,11 @@
 <script src="bpnote_codec.js"></script>
 <script src="bpnote-file-io.js"></script>
 <!-- Tabler Icons local -->
-<script src="https://cdn.jsdelivr.net/npm/tap-tempo@1.0.0/dist/tap-tempo.min.js"></script>
+<script type="module">
+  import TapTempo from 'https://esm.sh/tap-tempo@0.1.1';
+  window.tapTempoInstance = TapTempo();
+</script>
+<script src="tap-tempo-helper.js"></script>
 <link rel="stylesheet" href="tabler-icons.min.css">
 
 <style>
@@ -71,10 +75,9 @@ header h1 .logo{color:var(--acc);font-size:20px}
   .btn.clear{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.35);color:var(--err)}
   .btn.clear:hover{background:rgba(239,68,68,.16);border-color:var(--err);color:var(--err)}
 .btn:disabled{opacity:.4;cursor:not-allowed}
-
-.top-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.mobile-menu-toggle{display:none;padding:8px 12px;min-width:44px;min-height:44px;justify-content:center}
-.mobile-menu-toggle:active{opacity:0.8}
+.btn.tap-active{background:rgba(108,99,255,.2);border-color:var(--acc);color:var(--acc);box-shadow:0 0 0 1px rgba(108,99,255,.25) inset;transform:translateY(1px)}
+.btn.tap-active i{animation:pulseTap .35s ease}
+@keyframes pulseTap{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
 .mobile-menu{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:150;align-items:center;justify-content:center;padding:16px}
 .mobile-menu.active{display:flex}
 .mobile-menu-panel{background:var(--bg1);border:1px solid var(--br);border-radius:var(--r2);width:min(100%,320px);max-width:320px;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:12px}
@@ -1216,50 +1219,27 @@ init();
 
 
   // ========== Tap Tempo Implementation ==========
-  // Initialize TapTempo only when the modal is opened
-  let tapTempoInstance = null;
-  let tapTempoBtn = null;
+  let tapTempoController = null;
 
   function initTapTempo() {
-    if (tapTempoInstance || !document.getElementById('tapTempoBtn')) return;
-    
-    tapTempoInstance = new TapTempo();
-    tapTempoBtn = document.getElementById('tapTempoBtn');
+    if (tapTempoController) return;
+
+    const button = document.getElementById('tapTempoBtn');
     const bpmInput = document.getElementById('f_bpm');
+    if (!button || !bpmInput) return;
 
-    if (!bpmInput) return;
-
-    // Update BPM input when tempo is calculated
-    tapTempoInstance.on('bpm', (bpm) => {
-      bpmInput.value = Math.round(bpm);
-      bpmInput.dispatchEvent(new Event('input'));
-      bpmInput.dispatchEvent(new Event('change'));
-    });
-
-    // Tap on button click
-    tapTempoBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      tapTempoInstance.tap();
-    });
-
-    // Tap on space/enter key (only when modal is open)
-    document.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' || e.code === 'Enter') {
-        // Only trigger if we're in a modal context (simple check)
-        if (document.getElementById('modalDialog')?.offsetParent !== null) {
-          e.preventDefault();
-          tapTempoInstance.tap();
-        }
-      }
+    tapTempoController = new window.TapTempoController({
+      button,
+      input: bpmInput,
+      keyCodes: ['Space', 'Enter'],
+      instance: window.tapTempoInstance,
     });
   }
 
-  // Hook into modal open to initialize TapTempo
   const originalOpenModal = window.openModal;
   window.openModal = function(title, body, onSave) {
     const result = originalOpenModal.apply(this, arguments);
-    // Small delay to ensure DOM is rendered
-    setTimeout(initTapTempo, 50);
+    requestAnimationFrame(() => initTapTempo());
     return result;
   };
 </script>
