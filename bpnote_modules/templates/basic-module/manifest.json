@@ -1,0 +1,8 @@
+{
+  "id": "basic-module",
+  "name": "Module de base",
+  "version": "1.0.0",
+  "description": "Modèle minimal pour créer un nouveau module BypassNote.",
+  "author": "Auteur",
+  "entry": "index.js"
+}
