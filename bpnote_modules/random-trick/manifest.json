@@ -1,0 +1,7 @@
+{
+  "id": "random-trick",
+  "name": "Random Trick",
+  "version": "0.1.0",
+  "description": "Choisit un trick au hasard parmi les tricks visibles.",
+  "entry": "index.js"
+}

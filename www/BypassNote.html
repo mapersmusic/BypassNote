@@ -13,6 +13,7 @@
 <script>window.synapse = window.outsystemsSynapse;</script>
 <script src="https://cdn.jsdelivr.net/npm/@capacitor/filesystem@8.1.2/dist/plugin.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@capacitor/share@8.0.1/dist/plugin.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="bpnote_pb.js"></script>
 <script>
   if (typeof protobuf !== 'undefined' && protobuf.roots) {
@@ -136,6 +137,9 @@ tr:hover td{background:var(--bg2)}
 .field input,.field select,.field textarea{width:100%;background:var(--bg2);border:1px solid var(--br2);border-radius:var(--r);padding:7px 10px;font-size:13px;color:var(--t0);outline:none;font-family:inherit}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--acc)}
 .field select option{background:var(--bg2)}
+.field input[type="file"]{padding:8px 10px;cursor:pointer}
+.field input[type="file"]::file-selector-button{background:var(--bg3);color:var(--t0);border:1px solid var(--br2);border-radius:var(--r);padding:6px 10px;margin-right:8px;cursor:pointer}
+.field input[type="file"]::file-selector-button:hover{border-color:var(--acc);color:var(--acc)}
 .toolbar-select{background:var(--bg2);border:1px solid var(--br2);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--t0);outline:none;min-width:170px;cursor:pointer}
 .toolbar-select:focus{border-color:var(--acc)}
 .toolbar-select option{background:var(--bg2)}
@@ -335,78 +339,101 @@ const moduleHelpers = {
   showMessage: showModuleMessage,
   openExternal: openExternalLink,
   openModulePage,
+  closePage() {
+    if (typeof window !== 'undefined' && typeof window.close === 'function') {
+      window.close();
+    }
+  },
 };
 
-const builtInModules = [
-  {
-    id: 'random-trick',
-    name: 'Trick aléatoire',
-    description: 'Choisit un trick au hasard parmi les tricks visibles.',
-    createPage({ getVisibleItems }) {
-      const tricks = getVisibleItems('tricks');
-      if (!tricks.length) {
-        return `<div style="padding:24px;font-family:IBM Plex Sans,system-ui,sans-serif;color:#e4e4f0;background:#0f0f11;min-height:100vh">
-          <h1>Aucun trick disponible</h1>
-          <p>Aucune donnée de tricks n'est visible pour ce module.</p>
-        </div>`;
-      }
-      const pick = tricks[Math.floor(Math.random() * tricks.length)];
-      return `<div style="padding:24px;font-family:IBM Plex Sans,system-ui,sans-serif;color:#e4e4f0;background:#0f0f11;min-height:100vh">
-        <h1>Trick aléatoire</h1>
-        <p><strong>Description :</strong> ${e(pick.description)}</p>
-        <p><strong>ID :</strong> ${pick.id}</p>
-        <p><strong>Source :</strong> ${e(pick._sourceFile || SOURCE_LOCAL)}</p>
-        <p><button style="padding:10px 16px;border:none;border-radius:8px;background:#6c63ff;color:#fff;cursor:pointer" onclick="window.close()">Fermer</button></p>
-      </div>`;
-    },
-  },
-  {
-    id: 'export-csv',
-    name: 'Exporter CSV',
-    description: 'Génère une page web permettant de télécharger les lignes visibles au format CSV.',
-    createPage({ state, getVisibleItems }) {
-      const items = getVisibleItems(activeTab);
-      const rows = [];
-      const headers = [];
-      switch (activeTab) {
-        case 'tricks':
-          headers.push('ID', 'Description', 'Fichier');
-          items.forEach(i => rows.push([i.id, i.description, i._sourceFile || SOURCE_LOCAL]));
-          break;
-        case 'musicGenres': case 'musicParts': case 'artists':
-          headers.push('ID', 'Nom', 'Fichier');
-          items.forEach(i => rows.push([i.id, i.name, i._sourceFile || SOURCE_LOCAL]));
-          break;
-        case 'sources':
-          headers.push('ID', 'Type', 'Données', 'Fichier');
-          items.forEach(i => rows.push([i.id, SRC_LABELS[i.type] || i.type, i.data, i._sourceFile || SOURCE_LOCAL]));
-          break;
-        case 'trickMetadatas':
-          headers.push('Trick', 'Genre', 'Partie', 'Artiste', 'Source', 'Timestamp', 'Fichier');
-          items.forEach(i => rows.push([
-            resolveName(state.tricks, i.trickId, 'description'),
-            resolveName(state.musicGenres, i.musicGenreId, 'name'),
-            resolveName(state.musicParts, i.musicPartId, 'name'),
-            resolveName(state.artists, i.artistId, 'name'),
-            resolveSourceText(i.sourceId),
-            i.timestamp || 0,
-            i._sourceFile || SOURCE_LOCAL,
-          ]));
-          break;
-      }
-      const csvContent = [headers.join(','), ...rows.map(row => row.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(','))].join('\r\n');
-      const encoded = encodeURIComponent(csvContent);
-      return `<div style="padding:24px;font-family:IBM Plex Sans,system-ui,sans-serif;color:#e4e4f0;background:#0f0f11;min-height:100vh">
-        <h1>Exporter CSV</h1>
-        <p>Le module a généré un CSV pour les éléments visibles.</p>
-        <a href="data:text/csv;charset=utf-8,${encoded}" download="${activeTab}-${activeFileView||SOURCE_MERGED}.csv" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#6c63ff;color:#fff;text-decoration:none">Télécharger le CSV</a>
-        <p style="margin-top:16px"><button style="padding:10px 16px;border:none;border-radius:8px;background:#3b82f6;color:#fff;cursor:pointer" onclick="window.close()">Fermer</button></p>
-      </div>`;
-    },
-  },
-];
+const builtInModules = [];
 
 let installedModules = [...builtInModules];
+
+const MODULE_DB_NAME = 'BypassNoteModules';
+const MODULE_DB_VERSION = 1;
+const MODULE_SCHEMA_VERSION = '0.1';
+const MODULE_STORE_NAME = 'modules';
+
+function openModuleDatabase() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) return reject(new Error('IndexedDB n’est pas pris en charge par ce navigateur.'));
+    const request = window.indexedDB.open(MODULE_DB_NAME, MODULE_DB_VERSION);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(MODULE_STORE_NAME)) {
+        db.createObjectStore(MODULE_STORE_NAME, { keyPath: 'id' });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('Impossible d’ouvrir la base de modules.'));
+  });
+}
+
+async function saveModuleToStorage(moduleDef, source, manifest = null) {
+  try {
+    const db = await openModuleDatabase();
+    const tx = db.transaction(MODULE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(MODULE_STORE_NAME);
+    await new Promise((resolve, reject) => {
+      store.put({
+        id: moduleDef.id,
+        name: moduleDef.name,
+        description: moduleDef.description || '',
+        version: moduleDef.version || '1.0.0',
+        source,
+        manifest: manifest || {},
+        installedAt: new Date().toISOString(),
+      });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error || new Error('Échec de l’écriture du module.'));
+    });
+  } catch (err) {
+    console.warn('Impossible de stocker le module localement :', err);
+  }
+}
+
+async function removeModuleFromStorage(moduleId) {
+  try {
+    const db = await openModuleDatabase();
+    const tx = db.transaction(MODULE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(MODULE_STORE_NAME);
+    await new Promise((resolve, reject) => {
+      store.delete(moduleId);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error || new Error('Échec de la suppression du module.'));
+    });
+  } catch (err) {
+    console.warn('Impossible de supprimer le module du stockage :', err);
+  }
+}
+
+async function loadPersistedModules() {
+  if (!window.indexedDB) return;
+  try {
+    const db = await openModuleDatabase();
+    const tx = db.transaction(MODULE_STORE_NAME, 'readonly');
+    const store = tx.objectStore(MODULE_STORE_NAME);
+    const modules = await new Promise((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error || new Error('Échec de la lecture des modules persistés.'));
+    });
+
+    for (const entry of modules) {
+      try {
+        const mod = loadModuleFromSource(entry.source, entry.name || entry.id, entry.manifest || {}, true);
+        if (!installedModules.some(existing => existing.id === mod.id)) {
+          installedModules.push(mod);
+        }
+      } catch (err) {
+        console.warn('Module persisté ignoré :', err.message);
+      }
+    }
+  } catch (err) {
+    console.warn('Aucun stockage de modules disponible :', err.message);
+  }
+}
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
@@ -414,6 +441,7 @@ async function init() {
   try {
     codec = BPNoteCodec.fromCompiled();
     fileIO = new BPNoteFileIO(codec);
+    await loadPersistedModules();
     await new Promise(r => setTimeout(r, 100));
     document.getElementById('loader').classList.add('hidden');
     document.getElementById('app').style.display = 'flex';
@@ -716,7 +744,34 @@ function downloadBlob(filename, content, type = 'text/csv;charset=utf-8;') {
 }
 
 function openModulePage(title, html) {
-  const page = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${e(title)}</title></head><body style="margin:0;background:#0f0f11;color:#e4e4f0;font-family:IBM Plex Sans,system-ui,sans-serif">${html}</body></html>`;
+  const content = String(html || '');
+  const page = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${e(title)}</title>
+  <style>
+    html, body { height:100%; margin:0; }
+    body { background:#0f0f11; color:#e4e4f0; font-family:IBM Plex Sans,system-ui,sans-serif; overflow:hidden; }
+    .module-shell { height:100vh; display:flex; flex-direction:column; background:#0f0f11; color:#e4e4f0; overflow:hidden; }
+    .module-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px; border-bottom:1px solid #2e2e36; background:#18181b; flex-shrink:0; }
+    .module-toolbar .title { font-weight:600; font-size:14px; }
+    .module-toolbar .btn { padding:8px 12px; border:1px solid #3a3a44; border-radius:8px; background:#1e1e23; color:#e4e4f0; cursor:pointer; font-size:12px; }
+    .module-toolbar .btn:hover { border-color:#6c63ff; color:#6c63ff; }
+    .module-body { flex:1; padding:0; overflow:auto; min-height:0; }
+  </style>
+</head>
+<body>
+  <div class="module-shell">
+    <div class="module-toolbar">
+      <div class="title">${e(title)}</div>
+      <button type="button" class="btn" onclick="window.close()">Retour à BypassNote</button>
+    </div>
+    <div class="module-body">${content}</div>
+  </div>
+</body>
+</html>`;
   const blob = new Blob([page], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   window.open(url, '_blank');
@@ -745,18 +800,32 @@ function runModule(id) {
   }
 }
 
+async function uninstallModule(id) {
+  const mod = installedModules.find(m => m.id === id);
+  if (!mod) return;
+  if (!confirm(`Désinstaller le module "${mod.name}" ?`)) return;
+  await removeModuleFromStorage(id);
+  installedModules = installedModules.filter(m => m.id !== id);
+  showModuleMessage(`Module désinstallé : ${mod.name}`);
+  openModules();
+}
+
 function openModules() {
   const modulesHtml = installedModules.map(mod => `
     <div class="info-box" style="margin-bottom:10px">
       <strong>${e(mod.name)}</strong>
       <div style="font-size:12px;color:var(--t1);margin-top:4px">${e(mod.description)}</div>
-      <button class="btn primary" style="margin-top:8px" onclick="runModule('${e(mod.id)}')">Exécuter</button>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+        <button class="btn primary" onclick="runModule('${e(mod.id)}')">Exécuter</button>
+        <button class="btn clear" onclick="uninstallModule('${e(mod.id)}')">Désinstaller</button>
+      </div>
     </div>
   `).join('');
   const body = `
     <div class="info-box">Les modules peuvent accéder aux données visibles et générer des exportations ou actions personnalisées.</div>
     ${modulesHtml}
-    <div class="field"><label>Installer un module local (.js)</label><input type="file" id="moduleFileInput" accept=".js"></div>
+    <div class="field"><label>Installer un module local (.js ou .zip)</label><input type="file" id="moduleFileInput" accept=".js,.zip"></div>
+    <div class="info-box">Pour un paquet .zip, l’archive doit contenir directement les fichiers, sans dossier parent : manifest.json et un fichier d’entrée (par défaut index.js).</div>
   `;
   openModal('Modules', body, () => {});
   document.getElementById('mSave').style.display = 'none';
@@ -772,26 +841,59 @@ function showModuleMessage(msg) {
   alert(msg);
 }
 
-function installModuleFromFile(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const source = e.target.result;
-      const module = { exports: {} };
-      const fn = new Function('module', 'exports', 'state', 'helpers', source);
-      fn(module, module.exports, state, moduleHelpers);
-      const mod = module.exports;
-      if (!mod || !mod.id || !mod.name || !(typeof mod.createPage === 'function' || typeof mod.renderPage === 'function' || typeof mod.run === 'function')) {
-        throw new Error('Le module doit exporter {id, name} et createPage, renderPage ou run.');
+function loadModuleFromSource(source, sourceName, manifest = null, skipDuplicateCheck = false) {
+  const module = { exports: {} };
+  const fn = new Function('module', 'exports', 'state', 'helpers', source);
+  fn(module, module.exports, state, moduleHelpers);
+  const mod = module.exports;
+  if (!mod || !mod.id || !mod.name || !(typeof mod.createPage === 'function' || typeof mod.renderPage === 'function' || typeof mod.run === 'function')) {
+    throw new Error('Le module doit exporter {id, name} et createPage, renderPage ou run.');
+  }
+  if (manifest) {
+    mod.id = mod.id || manifest.id;
+    mod.name = mod.name || manifest.name;
+    mod.description = mod.description || manifest.description || '';
+    mod.version = mod.version || manifest.version || '1.0.0';
+  }
+  if (!skipDuplicateCheck && installedModules.some(existing => existing.id === mod.id)) {
+    throw new Error('Un module avec cet identifiant est déjà installé : ' + mod.id);
+  }
+  return mod;
+}
+
+async function installModuleFromFile(file) {
+  try {
+    let source = '';
+    let manifest = null;
+
+    if (/\.zip$/i.test(file.name)) {
+      if (typeof JSZip === 'undefined') {
+        throw new Error('La bibliothèque de décompression ZIP n’est pas disponible.');
       }
-      installedModules.push(mod);
-      showModuleMessage('Module installé : ' + mod.name);
-      openModules();
-    } catch (err) {
-      alert('Impossible d’installer le module : ' + err.message);
+      const zip = await JSZip.loadAsync(file);
+      const manifestEntry = zip.file('manifest.json');
+      if (!manifestEntry) {
+        throw new Error('Le paquet ZIP doit contenir un fichier manifest.json.');
+      }
+      manifest = JSON.parse(await manifestEntry.async('text'));
+      const entryName = manifest.entry || 'index.js';
+      const entry = zip.file(entryName);
+      if (!entry) {
+        throw new Error('Le paquet ZIP ne contient pas l’entrée du module : ' + entryName);
+      }
+      source = await entry.async('text');
+    } else {
+      source = await file.text();
     }
-  };
-  reader.readAsText(file);
+
+    const mod = loadModuleFromSource(source, file.name, manifest);
+    await saveModuleToStorage(mod, source, manifest);
+    installedModules.push(mod);
+    showModuleMessage('Module installé : ' + mod.name);
+    openModules();
+  } catch (err) {
+    alert('Impossible d’installer le module : ' + err.message);
+  }
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────

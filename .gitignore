@@ -2,6 +2,7 @@ node_modules/
 scripts/
 android/
 icons/
+bpnote_modules/**/*.zip
 package-lock.json
 bpnote_pb.js
 bpnote_pb.d.ts
