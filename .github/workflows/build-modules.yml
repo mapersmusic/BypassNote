@@ -1,0 +1,113 @@
+name: Build BypassNote modules
+
+on:
+  push:
+    branches: ['**']
+    paths: ['bpnote_modules/**']
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  discover:
+    name: Discover modules
+    runs-on: ubuntu-latest
+    outputs:
+      modules: ${{ steps.list.outputs.modules }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: List buildable modules
+        id: list
+        run: |
+          modules="[]"
+          for dir in bpnote_modules/*/; do
+            name="$(basename "$dir")"
+
+            # On ignore le dossier des templates : ce ne sont pas des modules à distribuer
+            if [ "$name" = "templates" ]; then
+              echo "Skipping templates/"
+              continue
+            fi
+
+            # Un module valide doit avoir un manifest.json
+            if [ -f "$dir/manifest.json" ]; then
+              modules="$(echo "$modules" | jq -c --arg n "$name" '. + [$n]')"
+            else
+              echo "Skipping $name (no manifest.json)"
+            fi
+          done
+
+          echo "Modules found: $modules"
+          echo "modules=$modules" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.module }}
+    needs: discover
+    if: needs.discover.outputs.modules != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJson(needs.discover.outputs.modules) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read module id and version from manifest
+        id: meta
+        run: |
+          dir="bpnote_modules/${{ matrix.module }}"
+          id="$(jq -r '.id' "$dir/manifest.json")"
+          version="$(jq -r '.version' "$dir/manifest.json")"
+
+          if [ -z "$id" ] || [ "$id" = "null" ]; then
+            echo "manifest.json in $dir is missing an 'id' field" >&2
+            exit 1
+          fi
+
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Zip module contents (no parent folder)
+        run: |
+          dir="bpnote_modules/${{ matrix.module }}"
+          zip_name="${{ steps.meta.outputs.id }}-${{ steps.meta.outputs.version }}.zip"
+
+          mkdir -p dist
+          # On zip le CONTENU du dossier, pas le dossier lui-même,
+          # pour respecter la règle "pas de dossier parent" du README.
+          (cd "$dir" && zip -r "$GITHUB_WORKSPACE/dist/$zip_name" . -x '*.DS_Store')
+
+          echo "Created dist/$zip_name"
+          unzip -l "dist/$zip_name"
+
+      - name: Upload module artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: module-${{ steps.meta.outputs.id }}-${{ steps.meta.outputs.version }}
+          path: dist/*.zip
+          if-no-files-found: error
+
+  release:
+    name: Attach modules to release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all module artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: module-*
+          merge-multiple: true
+
+      - name: Attach zips to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
