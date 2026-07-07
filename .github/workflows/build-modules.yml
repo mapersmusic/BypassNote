@@ -2,10 +2,9 @@ name: Build BypassNote modules
 
 on:
   push:
-    branches:
-      - '**'
-    paths:
-      - 'bpnote_modules/**'
+    branches: ['**']
+    paths: ['bpnote_modules/**']
+    tags: ['v*']
   workflow_dispatch:
 
 jobs:
