@@ -1,0 +1,61 @@
+{
+  "build": {
+    "distDir": "../../www",
+    "withGlobalTauri": true
+  },
+  "package": {
+    "productName": "BypassNote",
+    "version": "1.0.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "dialog": {
+        "all": true
+      },
+      "fs": {
+        "all": false,
+        "readFile": true,
+        "writeFile": true,
+        "readDir": true,
+        "copyFile": true,
+        "createDir": true
+      },
+      "path": {
+        "all": false
+      },
+      "shell": {
+        "all": false
+      }
+    },
+    "bundle": {
+      "active": true,
+      "targets": "all",
+      "identifier": "com.mapersmusic.BypassNote",
+      "icon": [
+        {
+          "file": "../../BypassNoteDesktop.png",
+          "sizes": [32, 128, 128]
+        }
+      ],
+      "longDescription": "BypassNote Desktop Application",
+      "shortDescription": "BypassNote",
+      "resources": [],
+      "externalBinaries": []
+    },
+    "updater": {
+      "active": false
+    },
+    "windows": [
+      {
+        "title": "BypassNote",
+        "width": 1200,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "visible": true
+      }
+    ]
+  }
+}
