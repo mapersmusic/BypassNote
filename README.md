@@ -1,52 +1,79 @@
-# BypassNote
+# BypassNote Tauri Setup
 
-<div align="center">
-  <img src="assets/icon.png" alt="icon" width="200" />
-</div>
+This branch contains the Tauri configuration for the BypassNote desktop application.
 
-## Overview
+## Prerequisites
 
-<div align="center">
-  <img src="BypassNoteMobile.jpg" alt="BypassNoteMobile" width="200" />
-</div>
+- [Rust](https://www.rust-lang.org/tools/install) (1.70 or later)
+- [Node.js](https://nodejs.org/) (18 or later)
+- [Tauri CLI](https://tauri.app/v1/guides/getting-started/prerequisites)
 
-![BypassNote UI](BypassNoteDesktop.png)
+## Installation
 
-## Build web app
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-```sh
-npm install
+2. Install Rust if not already installed:
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   ```
 
-npm run build-proto
+3. Add Rust to your PATH:
+   ```bash
+   source $HOME/.cargo/env
+   ```
+
+## Running the App
+
+### Development mode
+```bash
+npm run tauri dev
 ```
 
-## Build app for android
+This will start the Tauri development server with hot reloading.
 
-> [!Important] 
-> the android app is built from the web app. so, you need to build it before the android app
-
-```sh
-npx cap add android
-
-npx cap sync
-
-npx capacitor-assets generate
-
-npx cap sync
+### Production build
+```bash
+npm run tauri build
 ```
 
-Configure your Android SDK with the `ANDROID_SDK_ROOT` environment variable.
+This will create production builds for your current platform in the `src-tauri/target/release` directory.
 
-Example on Windows (replace `<your-user>` with your Windows username):
+## Project Structure
 
-```powershell
-setx ANDROID_SDK_ROOT "C:\Users\<your-user>\AppData\Local\Android\Sdk"
+- `src-tauri/` - Rust source code and Tauri configuration
+  - `main.rs` - Main Rust application entry point
+  - `Cargo.toml` - Rust dependencies and package configuration
+- `tauri.conf.json` - Tauri application configuration
+- `package.json` - Node.js dependencies and scripts
+- `www/` - Static web files (HTML, CSS, JS)
+
+## Notes
+
+- The Tauri configuration is set up to serve static files from the `www/` directory
+- File system access is enabled for reading/writing files (needed for BypassNote functionality)
+- The application window is configured with a default size of 1200x800
+
+## Customizing
+
+To customize the Tauri configuration:
+1. Edit `tauri.conf.json` for application settings (window size, permissions, etc.)
+2. Edit `src-tauri/main.rs` for custom Rust code and backend logic
+3. Edit files in `www/` for the frontend application
+
+## Building for Different Platforms
+
+Tauri can build for Windows, macOS, and Linux from any platform. To build for all platforms:
+
+```bash
+npm run tauri build -- --target universal
 ```
 
-Then run:
-
-```sh
-npx cap run
-
-npx cap build android
+Or specify a specific target:
+```bash
+npm run tauri build -- --target linux
+npm run tauri build -- --target windows
+npm run tauri build -- --target macos
 ```
