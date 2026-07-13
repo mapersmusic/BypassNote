@@ -1,6 +1,6 @@
 {
   "build": {
-    "distDir": "../www",
+    "distDir": "www",
     "withGlobalTauri": true
   },
   "package": {
