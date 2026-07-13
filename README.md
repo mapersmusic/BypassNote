@@ -1,79 +1,90 @@
-# BypassNote Tauri Setup
+# BypassNote
 
-This branch contains the Tauri configuration for the BypassNote desktop application.
+<div align="center">
+  <img src="assets/icon.png" alt="icon" width="200" />
+</div>
 
-## Prerequisites
+## Overview
+
+<div align="center">
+  <img src="BypassNoteMobile.jpg" alt="BypassNoteMobile" width="200" />
+</div>
+
+![BypassNote UI](BypassNoteDesktop.png)
+
+## Build web app
+
+```sh
+npm install
+
+npm run build-proto
+```
+
+## Build app for android
+
+> [!Important] 
+> the android app is built from the web app. so, you need to build it before the android app
+
+```sh
+npx cap add android
+
+npx cap sync
+
+npx capacitor-assets generate
+
+npx cap sync
+```
+
+Configure your Android SDK with the `ANDROID_SDK_ROOT` environment variable.
+
+Example on Windows (replace `<your-user>` with your Windows username):
+
+```powershell
+setx ANDROID_SDK_ROOT "C:\Users\<your-user>\AppData\Local\Android\Sdk"
+```
+
+Then run:
+
+```sh
+npx cap run
+
+npx cap build android
+```
+
+---
+
+## Build desktop app with Tauri
+
+This branch includes Tauri configuration for building desktop applications (Windows, macOS, Linux).
+
+### Prerequisites
 
 - [Rust](https://www.rust-lang.org/tools/install) (1.70 or later)
 - [Node.js](https://nodejs.org/) (18 or later)
-- [Tauri CLI](https://tauri.app/v1/guides/getting-started/prerequisites)
 
-## Installation
+### Running the app
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-2. Install Rust if not already installed:
-   ```bash
-   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-   ```
-
-3. Add Rust to your PATH:
-   ```bash
-   source $HOME/.cargo/env
-   ```
-
-## Running the App
-
-### Development mode
+#### Development mode
 ```bash
 npm run tauri dev
 ```
 
-This will start the Tauri development server with hot reloading.
-
-### Production build
+#### Production build
 ```bash
 npm run tauri build
 ```
 
-This will create production builds for your current platform in the `src-tauri/target/release` directory.
+### Building for all platforms
 
-## Project Structure
-
-- `src-tauri/` - Rust source code and Tauri configuration
-  - `main.rs` - Main Rust application entry point
-  - `Cargo.toml` - Rust dependencies and package configuration
-- `tauri.conf.json` - Tauri application configuration
-- `package.json` - Node.js dependencies and scripts
-- `www/` - Static web files (HTML, CSS, JS)
-
-## Notes
-
-- The Tauri configuration is set up to serve static files from the `www/` directory
-- File system access is enabled for reading/writing files (needed for BypassNote functionality)
-- The application window is configured with a default size of 1200x800
-
-## Customizing
-
-To customize the Tauri configuration:
-1. Edit `tauri.conf.json` for application settings (window size, permissions, etc.)
-2. Edit `src-tauri/main.rs` for custom Rust code and backend logic
-3. Edit files in `www/` for the frontend application
-
-## Building for Different Platforms
-
-Tauri can build for Windows, macOS, and Linux from any platform. To build for all platforms:
+The GitHub Actions workflow automatically builds for Windows, macOS, and Linux. You can also build locally:
 
 ```bash
-npm run tauri build -- --target universal
-```
+# Windows
+npm run tauri build -- --target x86_64-pc-windows-msvc
 
-Or specify a specific target:
-```bash
-npm run tauri build -- --target linux
-npm run tauri build -- --target windows
-npm run tauri build -- --target macos
+# macOS
+npm run tauri build -- --target universal-apple-darwin
+
+# Linux
+npm run tauri build -- --target x86_64-unknown-linux-gnu
 ```
