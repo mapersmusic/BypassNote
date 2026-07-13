@@ -5,11 +5,5 @@
   "identifier": "com.mapersmusic.BypassNote",
   "bundle": {
     "icon": ["assets/icon.png"]
-  },
-  "windows": [{
-    "title": "BypassNote",
-    "width": 1200,
-    "height": 800,
-    "resizable": true
-  }]
+  }
 }
