@@ -1,28 +1,9 @@
 {
+  "$schema": "https://json.schemastore.org/tauri2",
   "productName": "BypassNote",
   "version": "1.0.0",
   "identifier": "com.mapersmusic.BypassNote",
-  "allowlist": {
-    "all": false,
-    "dialog": {
-      "all": true
-    },
-    "fs": {
-      "readFile": true,
-      "writeFile": true,
-      "readDir": true,
-      "copyFile": true,
-      "createDir": true
-    },
-    "path": {
-      "all": false
-    },
-    "shell": {
-      "all": false
-    }
-  },
   "bundle": {
-    "identifier": "com.mapersmusic.BypassNote",
     "icon": ["assets/icon.png"]
   },
   "windows": [{
