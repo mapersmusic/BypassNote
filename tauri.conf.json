@@ -1,35 +1,34 @@
 {
   "productName": "BypassNote",
   "version": "1.0.0",
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "dialog": {
-        "all": true
-      },
-      "fs": {
-        "readFile": true,
-        "writeFile": true,
-        "readDir": true,
-        "copyFile": true,
-        "createDir": true
-      },
-      "path": {
-        "all": false
-      },
-      "shell": {
-        "all": false
-      }
+  "identifier": "com.mapersmusic.BypassNote",
+  "allowlist": {
+    "all": false,
+    "dialog": {
+      "all": true
     },
-    "bundle": {
-      "identifier": "com.mapersmusic.BypassNote",
-      "icon": ["BypassNoteDesktop.png"]
+    "fs": {
+      "readFile": true,
+      "writeFile": true,
+      "readDir": true,
+      "copyFile": true,
+      "createDir": true
     },
-    "windows": [{
-      "title": "BypassNote",
-      "width": 1200,
-      "height": 800,
-      "resizable": true
-    }]
-  }
+    "path": {
+      "all": false
+    },
+    "shell": {
+      "all": false
+    }
+  },
+  "bundle": {
+    "identifier": "com.mapersmusic.BypassNote",
+    "icon": ["assets/icon.png"]
+  },
+  "windows": [{
+    "title": "BypassNote",
+    "width": 1200,
+    "height": 800,
+    "resizable": true
+  }]
 }
