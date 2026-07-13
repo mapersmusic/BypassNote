@@ -1,19 +1,27 @@
 {
-  "name": "BypassNote",
-  "version": "1.0.0",
-  "description": "BypassNote Desktop Application",
+  "name": "bypass-note",
+  "version": "0.1.0",
   "scripts": {
+    "proto:js": "pbjs -t static-module -w closure -o www/bpnote_pb.js bpnote_file/bpnote_0_1.proto",
+    "proto:ts": "pbts -o www/bpnote_pb.d.ts www/bpnote_pb.js",
+    "build-proto": "npm run proto:js && npm run proto:ts",
     "tauri": "tauri",
     "tauri dev": "tauri dev",
     "tauri build": "tauri build"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/cli": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/synapse": "^1.0.4",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/share": "^8.0.1",
     "@tauri-apps/api": "^2.0.0"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.0.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
+    "@capacitor/assets": "^3.0.5",
+    "@tauri-apps/cli": "^2.0.0",
+    "protobufjs": "^8.4.2",
+    "protobufjs-cli": "^2.4.2"
   }
 }
