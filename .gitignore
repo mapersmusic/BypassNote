@@ -1,14 +1,27 @@
+# Dependencies
 node_modules/
-scripts/
-android/
-icons/
-bpnote_modules/**/*.zip
-package-lock.json
-bpnote_pb.js
-bpnote_pb.d.ts
-TODO
 
-# Security - never commit keystores
-*.keystore
-android/release.keystore
-android/debug.keystore
+# Build output
+target/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Tauri
+src-tauri/target/
