@@ -1,0 +1,100 @@
+name: Tauri Build
+
+on:
+  push:
+    branches: [ feat/tauri-setup ]
+  pull_request:
+    branches: [ feat/tauri-setup ]
+
+jobs:
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Build Tauri for Windows
+        run: npm run tauri build -- --target x86_64-pc-windows-msvc
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BypassNote-windows
+          path: src-tauri/target/x86_64-pc-windows-msvc/release/*.msi
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Build Tauri for macOS
+        run: npm run tauri build -- --target universal-apple-darwin
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BypassNote-macos
+          path: src-tauri/target/universal-apple-darwin/release/*.app
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libgtk-3-dev libsoup-2.4-dev libjavascriptcoregtk-4.0-dev
+
+      - name: Build Tauri for Linux
+        run: npm run tauri build -- --target x86_64-unknown-linux-gnu
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BypassNote-linux
+          path: src-tauri/target/x86_64-unknown-linux-gnu/release/*.AppImage
