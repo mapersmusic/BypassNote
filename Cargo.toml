@@ -8,6 +8,7 @@ repository = "https://github.com/mapersmusic/BypassNote"
 default-run = "BypassNote"
 edition = "2021"
 rust-version = "1.70"
+build = "build.rs"
 
 [build-dependencies]
 tauri-build = { version = "2.1", features = [] }
