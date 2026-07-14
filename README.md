@@ -50,3 +50,41 @@ npx cap run
 
 npx cap build android
 ```
+
+---
+
+## Build desktop app with Tauri
+
+This branch includes Tauri configuration for building desktop applications (Windows, macOS, Linux).
+
+### Prerequisites
+
+- [Rust](https://www.rust-lang.org/tools/install) (1.70 or later)
+- [Node.js](https://nodejs.org/) (18 or later)
+
+### Running the app
+
+#### Development mode
+```bash
+npm run tauri dev
+```
+
+#### Production build
+```bash
+npm run tauri build
+```
+
+### Building for all platforms
+
+The GitHub Actions workflow automatically builds for Windows, macOS, and Linux. You can also build locally:
+
+```bash
+# Windows
+npm run tauri build -- --target x86_64-pc-windows-msvc
+
+# macOS
+npm run tauri build -- --target universal-apple-darwin
+
+# Linux
+npm run tauri build -- --target x86_64-unknown-linux-gnu
+```

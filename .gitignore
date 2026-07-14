@@ -12,3 +12,26 @@ TODO
 *.keystore
 android/release.keystore
 android/debug.keystore
+
+# Tauri
+target/
+src-tauri/target/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local

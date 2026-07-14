@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/tauri2-capability",
+  "identifier": "main",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "fs:allow-read",
+    "fs:allow-write",
+    "fs:allow-read-dir",
+    "fs:allow-create-dir",
+    "fs:allow-copy-file"
+  ]
+}
