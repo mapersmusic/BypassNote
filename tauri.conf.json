@@ -4,6 +4,12 @@
   "version": "0.1.0",
   "identifier": "com.mapersmusic.BypassNote",
   "bundle": {
-    "icon": ["assets/icon.png"]
+    "icon": [
+      "icons/icon.ico",
+      "icons/icon.icns",
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png"
+    ]
   }
 }
