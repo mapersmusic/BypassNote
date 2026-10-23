@@ -1,5 +1,5 @@
 {
   "appId": "com.mapers.bypassnote",
   "appName": "bypass-note",
-  "webDir": "www"
+  "webDir": "dist"
 }
