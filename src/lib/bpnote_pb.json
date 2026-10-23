@@ -1,0 +1,248 @@
+{
+  "nested": {
+    "Artist": {
+      "fields": {
+        "id": {
+          "type": "uint64",
+          "id": 1
+        },
+        "name": {
+          "type": "string",
+          "id": 2
+        }
+      }
+    },
+    "MusicGenre": {
+      "fields": {
+        "id": {
+          "type": "uint32",
+          "id": 1
+        },
+        "name": {
+          "type": "string",
+          "id": 2
+        }
+      }
+    },
+    "MusicPart": {
+      "fields": {
+        "id": {
+          "type": "uint32",
+          "id": 1
+        },
+        "name": {
+          "type": "string",
+          "id": 2
+        }
+      }
+    },
+    "Tonic": {
+      "options": {
+        "allow_alias": true
+      },
+      "values": {
+        "TONIC_C": 0,
+        "TONIC_C_SHARP": 1,
+        "TONIC_D_FLAT": 1,
+        "TONIC_D": 2,
+        "TONIC_D_SHARP": 3,
+        "TONIC_E_FLAT": 3,
+        "TONIC_E": 4,
+        "TONIC_F": 5,
+        "TONIC_F_SHARP": 6,
+        "TONIC_G_FLAT": 6,
+        "TONIC_G": 7,
+        "TONIC_G_SHARP": 8,
+        "TONIC_A_FLAT": 8,
+        "TONIC_A": 9,
+        "TONIC_A_SHARP": 10,
+        "TONIC_B_FLAT": 10,
+        "TONIC_B": 11
+      }
+    },
+    "Mode": {
+      "values": {
+        "MODE_MAJOR": 0,
+        "MODE_DORIAN": 1,
+        "MODE_PHRYGIAN": 2,
+        "MODE_LYDIAN": 3,
+        "MODE_MIXOLYDIAN": 4,
+        "MODE_AEOLIAN": 5,
+        "MODE_LOCRIAN": 6,
+        "MODE_MELODIC_MINOR": 7,
+        "MODE_DORIAN_FLAT2": 8,
+        "MODE_LYDIAN_AUGMENTED": 9,
+        "MODE_LYDIAN_FLAT7": 10,
+        "MODE_MIXOLYDIAN_FLAT6": 11,
+        "MODE_LOCRIAN_NATURAL2": 12,
+        "MODE_ALTERED": 13,
+        "MODE_HARMONIC_MINOR": 14,
+        "MODE_PHRYGIAN_DOMINANT": 15,
+        "MODE_LYDIAN_SHARP2": 16,
+        "MODE_ULTRA_LOCRIAN": 17,
+        "MODE_HARMONIC_MAJOR": 18,
+        "MODE_DORIAN_FLAT5": 19,
+        "MODE_PHRYGIAN_FLAT4": 20,
+        "MODE_LYDIAN_FLAT3": 21,
+        "MODE_MIXOLYDIAN_FLAT2": 22,
+        "MODE_LYDIAN_AUGMENTED_SHARP2": 23,
+        "MODE_LOCRIAN_FLAT7": 24,
+        "MODE_WHOLE_TONE": 25,
+        "MODE_DIMINISHED_TONE_SEMI": 26,
+        "MODE_DIMINISHED_SEMI_TONE": 27,
+        "MODE_HUNGARIAN_MINOR": 28,
+        "MODE_HUNGARIAN_MAJOR": 29,
+        "MODE_HIJAZ": 30,
+        "MODE_DOUBLE_HARMONIC": 31,
+        "MODE_HIRAJOSHI": 32,
+        "MODE_PELOG": 33,
+        "MODE_PROMETHEUS": 34,
+        "MODE_ENIGMATIC": 35,
+        "MODE_NEAPOLITAN_MINOR": 36,
+        "MODE_NEAPOLITAN_MAJOR": 37,
+        "MODE_ORIENTAL": 38
+      }
+    },
+    "Key": {
+      "fields": {
+        "tonic": {
+          "type": "Tonic",
+          "id": 1
+        },
+        "mode": {
+          "type": "Mode",
+          "id": 2
+        }
+      }
+    },
+    "SourceType": {
+      "values": {
+        "URL": 1,
+        "YOUTUBE": 2,
+        "YOUTUBE_MUSIC": 3
+      }
+    },
+    "Source": {
+      "fields": {
+        "id": {
+          "type": "uint64",
+          "id": 1
+        },
+        "type": {
+          "type": "SourceType",
+          "id": 2
+        },
+        "data": {
+          "type": "string",
+          "id": 3
+        },
+        "title": {
+          "type": "string",
+          "id": 4
+        },
+        "key": {
+          "type": "Key",
+          "id": 5
+        },
+        "bpm": {
+          "type": "uint32",
+          "id": 6
+        }
+      }
+    },
+    "Trick": {
+      "fields": {
+        "id": {
+          "type": "uint64",
+          "id": 1
+        },
+        "description": {
+          "type": "string",
+          "id": 2
+        }
+      }
+    },
+    "TrickMetadata": {
+      "fields": {
+        "trickId": {
+          "type": "uint64",
+          "id": 2
+        },
+        "musicGenreId": {
+          "type": "uint32",
+          "id": 3
+        },
+        "musicPartId": {
+          "type": "uint32",
+          "id": 4
+        },
+        "artistId": {
+          "type": "uint64",
+          "id": 5
+        },
+        "sourceId": {
+          "type": "uint64",
+          "id": 6
+        },
+        "timestamp": {
+          "type": "sint32",
+          "id": 7
+        }
+      }
+    },
+    "Version": {
+      "fields": {
+        "major": {
+          "type": "uint32",
+          "id": 1
+        },
+        "minor": {
+          "type": "uint32",
+          "id": 2
+        }
+      }
+    },
+    "BPNoteFile": {
+      "fields": {
+        "version": {
+          "type": "Version",
+          "id": 1
+        },
+        "tricks": {
+          "rule": "repeated",
+          "type": "Trick",
+          "id": 2
+        },
+        "musicGenres": {
+          "rule": "repeated",
+          "type": "MusicGenre",
+          "id": 3
+        },
+        "musicParts": {
+          "rule": "repeated",
+          "type": "MusicPart",
+          "id": 4
+        },
+        "artists": {
+          "rule": "repeated",
+          "type": "Artist",
+          "id": 5
+        },
+        "sources": {
+          "rule": "repeated",
+          "type": "Source",
+          "id": 6
+        },
+        "trickMetadatas": {
+          "rule": "repeated",
+          "type": "TrickMetadata",
+          "id": 7
+        },
+        "author": {
+          "type": "string",
+          "id": 8
+        }
+      }
+    }
+  }
+}

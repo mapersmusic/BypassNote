@@ -12,41 +12,77 @@
 
 ![BypassNote UI](BypassNoteDesktop.png)
 
-## Build web app
+Application [Expo](https://expo.dev) (Expo Router + TypeScript), cible Android et web.
+
+## Démarrer
 
 ```sh
 npm install
-
-npm run build-proto
+npm run web      # serveur de dev web
+npm run android  # dev Android
 ```
 
-## Build app for android
-
-> [!Important] 
-> the android app is built from the web app. so, you need to build it before the android app
+## Build web
 
 ```sh
-npx cap add android
-
-npx cap sync
-
-npx capacitor-assets generate
-
-npx cap sync
+npm run build:web
 ```
 
-Configure your Android SDK with the `ANDROID_SDK_ROOT` environment variable.
+Le build est généré dans `dist/` et peut être hébergé tel quel sur un serveur
+statique (Netlify, Vercel, Cloudflare Pages, GitHub Pages, Nginx...).
 
-Example on Windows (replace `<your-user>` with your Windows username):
+`app.json` configure `web.output: "single"` : une seule page HTML, le routage
+(`/`, `/collection/tricks`, ...) est géré côté client. L'hébergeur doit donc
+renvoyer `index.html` pour toute URL inconnue (fallback SPA).
+
+- Netlify : `public/_redirects` avec `/*  /index.html  200`
+- Vercel : `{"rewrites": [{"source": "/(.*)", "destination": "/index.html"}]}`
+- Nginx : `try_files $uri $uri/ /index.html;`
+- Cloudflare Pages : fallback SPA automatique
+
+Pour un sous-répertoire (`user.github.io/BypassNote/`), ajoutez `baseUrl` dans
+`app.json` puis reconstruisez :
+
+```jsonc
+"experiments": {
+  "baseUrl": "/BypassNote/"
+}
+```
+
+## Build Android (Capacitor)
+
+Capacitor utilise le dossier `dist/` généré par `npm run build:web`.
+
+```sh
+npm run build:web
+npx cap add android
+npx cap sync android
+npx capacitor-assets generate
+npx cap sync android
+```
+
+Configurez le SDK Android avec `ANDROID_SDK_ROOT` :
 
 ```powershell
 setx ANDROID_SDK_ROOT "C:\Users\<your-user>\AppData\Local\Android\Sdk"
 ```
 
-Then run:
+Puis :
 
 ```sh
-npx cap run
-
+npx cap run android
 npx cap build android
 ```
+
+Raccourci : `npm run cap:sync` rebuild `dist/` puis lance `npx cap sync`.
+
+## Structure
+
+- `src/app` — routes Expo Router (`collection/[id].tsx`)
+- `src/components` — composants partagés
+- `src/hooks` — hooks réutilisables
+- `src/lib` — codec protobuf `.bpnote`, import/export, store React, modules
+- `src/styles` — styles globaux et polices
+- `assets` — icônes et images de l'app Expo
+
+Les modules `.js` / `.zip` s'installent depuis **Modules** dans l'application.

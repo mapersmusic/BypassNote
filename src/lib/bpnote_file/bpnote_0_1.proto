@@ -1,0 +1,141 @@
+// bpnote.proto
+syntax = "proto3";
+
+message Artist {
+    uint64 id = 1;
+    string name = 2;
+}
+
+message MusicGenre {
+    uint32 id = 1;
+    string name = 2;
+}
+
+message MusicPart {
+    uint32 id = 1;
+    string name = 2;
+}
+
+enum Tonic {
+    option allow_alias = true;
+    TONIC_C       = 0;
+    TONIC_C_SHARP = 1;
+    TONIC_D_FLAT  = 1;  // Alias
+    TONIC_D       = 2;
+    TONIC_D_SHARP = 3;
+    TONIC_E_FLAT  = 3;
+    TONIC_E       = 4;
+    TONIC_F       = 5;
+    TONIC_F_SHARP = 6;
+    TONIC_G_FLAT  = 6;
+    TONIC_G       = 7;
+    TONIC_G_SHARP = 8;
+    TONIC_A_FLAT  = 8;
+    TONIC_A       = 9;
+    TONIC_A_SHARP = 10;
+    TONIC_B_FLAT  = 10;
+    TONIC_B       = 11;
+}
+
+enum Mode {
+    // Modes grecs
+    MODE_MAJOR                      = 0;  // Ionien
+    MODE_DORIAN                     = 1;
+    MODE_PHRYGIAN                   = 2;
+    MODE_LYDIAN                     = 3;
+    MODE_MIXOLYDIAN                 = 4;
+    MODE_AEOLIAN                    = 5;  // Mineur naturel
+    MODE_LOCRIAN                    = 6;
+
+    // Modes du mineur mélodique
+    MODE_MELODIC_MINOR              = 7;
+    MODE_DORIAN_FLAT2               = 8;   // Phrygien ♮6
+    MODE_LYDIAN_AUGMENTED           = 9;
+    MODE_LYDIAN_FLAT7               = 10;  // Bartók / Lydien dominant
+    MODE_MIXOLYDIAN_FLAT6           = 11;
+    MODE_LOCRIAN_NATURAL2           = 12;  // Semi-locrien
+    MODE_ALTERED                    = 13;  // Super-locrien
+
+    // Modes du mineur harmonique
+    MODE_HARMONIC_MINOR             = 14;
+    MODE_PHRYGIAN_DOMINANT          = 15;  // Mode 5
+    MODE_LYDIAN_SHARP2              = 16;  // Mode 6
+    MODE_ULTRA_LOCRIAN              = 17;  // Mode 7
+
+    // Modes du majeur harmonique
+    MODE_HARMONIC_MAJOR             = 18;  // Majeur ♭6
+    MODE_DORIAN_FLAT5               = 19;  // Mode 2
+    MODE_PHRYGIAN_FLAT4             = 20;  // Mode 3 (Phrygien diminué)
+    MODE_LYDIAN_FLAT3               = 21;  // Mode 4 (Lydien diminué)
+    MODE_MIXOLYDIAN_FLAT2           = 22;  // Mode 5
+    MODE_LYDIAN_AUGMENTED_SHARP2    = 23;  // Mode 6
+    MODE_LOCRIAN_FLAT7              = 24;  // Mode 7 (Locrien diminué)
+
+    // Gammes symétriques
+    MODE_WHOLE_TONE                 = 25;  // Par tons
+    MODE_DIMINISHED_TONE_SEMI       = 26;  // Diminuée ton-demi (octatonique)
+    MODE_DIMINISHED_SEMI_TONE       = 27;  // Diminuée demi-ton (octatonique)
+
+    // Modes exotiques
+    MODE_HUNGARIAN_MINOR            = 28;
+    MODE_HUNGARIAN_MAJOR            = 29;
+    MODE_HIJAZ                      = 30;  // Arabe
+    MODE_DOUBLE_HARMONIC            = 31;  // Byzantin
+    MODE_HIRAJOSHI                  = 32;  // Japonais
+    MODE_PELOG                      = 33;
+    MODE_PROMETHEUS                 = 34;
+    MODE_ENIGMATIC                  = 35;
+    MODE_NEAPOLITAN_MINOR           = 36;
+    MODE_NEAPOLITAN_MAJOR           = 37;
+    MODE_ORIENTAL                   = 38;
+}
+
+message Key {
+    Tonic tonic = 1;
+    Mode mode = 2;
+}
+
+enum SourceType {
+    URL = 1;
+    YOUTUBE = 2;
+    YOUTUBE_MUSIC = 3;
+}
+
+message Source {
+    uint64 id = 1;
+    SourceType type = 2;
+    string data = 3;
+    string title = 4;
+    Key key = 5;
+    uint32 bpm = 6;
+}
+
+message Trick {
+    uint64 id = 1;
+    string description = 2;
+}
+
+message TrickMetadata {
+    uint64 trickId = 2;
+    uint32 musicGenreId = 3;
+    uint32 musicPartId = 4;
+    uint64 artistId = 5;
+    uint64 sourceId = 6;
+    sint32 timestamp = 7;
+}
+
+message Version {
+    uint32 major = 1;
+    uint32 minor = 2;
+}
+
+message BPNoteFile {
+    Version version = 1;
+    repeated Trick tricks = 2;
+    repeated MusicGenre musicGenres = 3;
+    repeated MusicPart musicParts = 4;
+    repeated Artist artists = 5;
+    repeated Source sources = 6;
+    repeated TrickMetadata trickMetadatas = 7;
+    string author = 8;
+}
