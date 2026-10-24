@@ -28,8 +28,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build protobuf sources
-        run: npm run build-proto
+      - name: Build web app
+        run: npm run build:web
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
