@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { COLLECTIONS, type CollectionId } from "@/constants/collections";
+import { useAutosave, type AutosaveState } from "@/hooks/use-autosave";
 import {
   encodedSize,
   STANDARD_VERSION,
@@ -50,6 +51,8 @@ type Store = {
   size: number;
   /** Noms des fichiers importés. */
   files: string[];
+  /** État de la sauvegarde automatique locale. */
+  autosave: AutosaveState;
 
   hexOpen: boolean;
   modulesOpen: boolean;
@@ -82,6 +85,23 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
   const [modulesOpen, setModulesOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+
+  const restoreDraft = useCallback((draft: BpnoteState) => {
+    setState(draft);
+    setStatus({ kind: "info", message: "Sauvegarde automatique restaurée." });
+  }, []);
+
+  const reportAutosaveError = useCallback((error: Error) => {
+    setStatus({
+      kind: "error",
+      message: `Sauvegarde automatique impossible : ${error.message}`,
+    });
+  }, []);
+
+  const autosave = useAutosave(state, {
+    onRestore: restoreDraft,
+    onError: reportAutosaveError,
+  });
 
   const counts = useMemo(() => {
     const entries = COLLECTIONS.map(({ id }) => [id, (state[id] ?? []).length] as const);
@@ -166,6 +186,7 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
       counts,
       size,
       files,
+      autosave,
       hexOpen,
       modulesOpen,
       exportOpen,
@@ -187,6 +208,7 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
       counts,
       size,
       files,
+      autosave,
       hexOpen,
       modulesOpen,
       exportOpen,

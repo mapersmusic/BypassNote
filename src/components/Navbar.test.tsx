@@ -30,4 +30,12 @@ describe("Navbar", () => {
     expect(onPress).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("Menu")).toBeNull();
   });
+
+  it("affiche l'heure de la dernière sauvegarde automatique", () => {
+    const savedAt = new Date(2026, 0, 2, 14, 32).getTime();
+
+    render(<Navbar actions={[]} autosave={{ status: "saved", savedAt }} />);
+
+    expect(screen.getByLabelText("Sauvegardé automatiquement à 14:32")).toBeTruthy();
+  });
 });

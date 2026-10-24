@@ -66,6 +66,7 @@ function Shell() {
   const {
     state,
     counts,
+    autosave,
     hexOpen,
     exportOpen,
     toggleHex,
@@ -120,6 +121,7 @@ function Shell() {
       <Navbar
         activeCollectionId={activeCollection?.id}
         onSelectCollection={goToCollection}
+        autosave={autosave}
         actions={[
           { key: "hex", label: "Hex", icon: IconTerminal2, onPress: toggleHex },
           { key: "import", label: "Importer .bpnote", icon: IconUpload, onPress: importBpnote },
