@@ -18,6 +18,7 @@ import {
   type Row,
 } from "@/constants/schema";
 import { useBpnote } from "@/lib/store";
+import { readField, toDraft, type Draft } from "@/lib/entity-draft";
 import { useTapTempo } from "@/hooks/use-tap-tempo";
 import { colors, fontFamily, FontSize, globalStyles, radii, Spacing } from "@/styles/global";
 
@@ -31,33 +32,17 @@ type Props = {
   onSubmit: (values: Record<string, unknown>) => void;
 };
 
-type Draft = Record<string, string>;
-
-function toDraft(item: Row | null): Draft {
-  if (!item) {
-    return {};
-  }
-
-  return Object.fromEntries(
-    Object.entries(item).map(([key, value]) => [
-      key,
-      value === null || value === undefined ? "" : String(value),
-    ]),
-  );
-}
-
 /** Formulaire d'ajout / d'édition — équivalent de `buildForm()` + `readForm()`. */
 export function EntityForm({ visible, collection, title, item, onClose, onSubmit }: Props) {
-  const { state } = useBpnote();
   const [draft, setDraft] = useState<Draft>(() => toDraft(item));
-  const [key, setKey] = useState<[Draft, Draft]>(() => [toDraft(item), toDraft(item)]);
 
-  // Réinitialise le brouillon à chaque ouverture.
-  const [lastItem, setLastItem] = useState(item);
-  if (visible && lastItem !== item) {
-    setLastItem(item);
-    setDraft(toDraft(item));
-    setKey([toDraft(item), toDraft(item)]);
+  // Réinitialise le brouillon à chaque ouverture (édition comme création).
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
+    if (visible) {
+      setDraft(toDraft(item));
+    }
   }
 
   const set = (name: string, value: string) => setDraft((prev) => ({ ...prev, [name]: value }));
@@ -66,7 +51,7 @@ export function EntityForm({ visible, collection, title, item, onClose, onSubmit
     const values: Record<string, unknown> = {};
 
     for (const field of FIELDS[collection]) {
-      values[field.name] = readField(field, draft, key);
+      values[field.name] = readField(field, draft);
     }
 
     onSubmit(values);
@@ -85,14 +70,7 @@ export function EntityForm({ visible, collection, title, item, onClose, onSubmit
 
           <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
             {FIELDS[collection].map((field) => (
-              <FieldInput
-                key={field.name}
-                field={field}
-                value={draft[field.name] ?? ""}
-                keyPair={key}
-                onChange={(value) => set(field.name, value)}
-                onKeyChange={setKey}
-              />
+              <FieldInput key={field.name} field={field} draft={draft} onChange={set} />
             ))}
           </ScrollView>
 
@@ -110,36 +88,16 @@ export function EntityForm({ visible, collection, title, item, onClose, onSubmit
   );
 }
 
-function readField(
-  field: Field,
-  draft: Draft,
-  key: [Draft, Draft],
-): unknown {
-  if (field.kind === "key") {
-    return key[0].tonic && key[0].mode
-      ? { tonic: Number(key[0].tonic), mode: Number(key[0].mode) }
-      : undefined;
-  }
-
-  if (field.kind === "number" || field.kind === "timestamp" || field.kind === "select") {
-    return Number(draft[field.name] ?? 0) || 0;
-  }
-
-  return draft[field.name] ?? "";
-}
-
 type FieldInputProps = {
   field: Field;
-  value: string;
-  keyPair: [Draft, Draft];
-  onChange: (value: string) => void;
-  onKeyChange: (pair: [Draft, Draft]) => void;
+  draft: Draft;
+  onChange: (name: string, value: string) => void;
 };
 
-function FieldInput({ field, value, keyPair, onChange, onKeyChange }: FieldInputProps) {
+function FieldInput({ field, draft, onChange }: FieldInputProps) {
   const { state } = useBpnote();
-  const [tonic, mode] = keyPair;
-  const tapTempo = useTapTempo((bpm) => onChange(String(bpm)));
+  const value = draft[field.name] ?? "";
+  const tapTempo = useTapTempo((bpm) => onChange(field.name, String(bpm)));
 
   if (field.kind === "select") {
     const options = field.options?.(state) ?? [];
@@ -152,7 +110,7 @@ function FieldInput({ field, value, keyPair, onChange, onKeyChange }: FieldInput
             <Chip
               label="— Aucun —"
               active={value === "" || value === "0"}
-              onPress={() => onChange("")}
+              onPress={() => onChange(field.name, "")}
             />
           ) : null}
           {options.map((option) => (
@@ -160,7 +118,7 @@ function FieldInput({ field, value, keyPair, onChange, onKeyChange }: FieldInput
               key={option.value}
               label={option.label}
               active={value === option.value}
-              onPress={() => onChange(option.value)}
+              onPress={() => onChange(field.name, option.value)}
             />
           ))}
         </View>
@@ -169,30 +127,36 @@ function FieldInput({ field, value, keyPair, onChange, onKeyChange }: FieldInput
   }
 
   if (field.kind === "key") {
+    const tonic = draft.tonic ?? "";
+    const mode = draft.mode ?? "";
+
     return (
       <View style={styles.field}>
         <Text style={styles.label}>{field.label}</Text>
         <View style={styles.chips}>
           <Chip
             label="— Aucune —"
-            active={!tonic.tonic}
-            onPress={() => onKeyChange([{}, {}])}
+            active={!tonic && !mode}
+            onPress={() => {
+              onChange("tonic", "");
+              onChange("mode", "");
+            }}
           />
         </View>
         <View style={styles.keyRow}>
           <Select
             label="Tonique"
-            value={tonic.tonic ?? ""}
+            value={tonic}
             emptyLabel="—"
             options={Object.entries(TONIC_LABELS).map(([k, v]) => ({ value: k, label: v }))}
-            onChange={(v) => onKeyChange([{ ...tonic, tonic: v }, { ...mode, mode: mode.mode ?? "" }])}
+            onChange={(v) => onChange("tonic", v)}
           />
           <Select
             label="Mode"
-            value={mode.mode ?? ""}
+            value={mode}
             emptyLabel="—"
             options={Object.entries(MODE_LABELS).map(([k, v]) => ({ value: k, label: v }))}
-            onChange={(v) => onKeyChange([{ ...tonic, tonic: tonic.tonic ?? "" }, { ...mode, mode: v }])}
+            onChange={(v) => onChange("mode", v)}
           />
         </View>
       </View>
@@ -204,7 +168,7 @@ function FieldInput({ field, value, keyPair, onChange, onKeyChange }: FieldInput
   const input = (
     <TextInput
       value={value}
-      onChangeText={onChange}
+      onChangeText={(text) => onChange(field.name, text)}
       style={[styles.input, field.tapTempo && styles.bpmInput, multiline && styles.inputMultiline]}
       placeholder={field.label}
       placeholderTextColor={colors.textMuted}
