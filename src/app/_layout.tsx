@@ -9,8 +9,10 @@ import { JetBrainsMono_400Regular } from "@expo-google-fonts/jetbrains-mono/400R
 import { JetBrainsMono_500Medium } from "@expo-google-fonts/jetbrains-mono/500Medium";
 import { useFonts } from "expo-font";
 import { Stack, router, usePathname } from "expo-router";
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { ExportPanel } from "../components/ExportPanel";
 import { HexPanel } from "../components/HexPanel";
 import {
   IconDownload,
@@ -28,6 +30,15 @@ import {
   type CollectionId,
 } from "../constants/collections";
 import { useIsCompact, useIsWide } from "../hooks/use-breakpoint";
+import {
+  countCollectionItems,
+  countSelectedCollectionItems,
+  createExportSelection,
+  selectAllItems,
+  setCollectionSelected,
+  toggleExportItem,
+  type ExportSelection,
+} from "../lib/export-selection";
 import { BpnoteProvider, useBpnote } from "../lib/store";
 import { colors, fontFamily } from "../styles/global";
 
@@ -52,7 +63,49 @@ function Shell() {
   const pathname = usePathname();
   const isWide = useIsWide();
   const isCompact = useIsCompact();
-  const { counts, hexOpen, toggleHex, openModules, importBpnote, exportBpnote } = useBpnote();
+  const {
+    state,
+    counts,
+    hexOpen,
+    exportOpen,
+    toggleHex,
+    openModules,
+    openExport,
+    closeExport,
+    importBpnote,
+    exportBpnote,
+  } = useBpnote();
+
+  // La sélection est recalculée à chaque ouverture : les lignes ont pu changer
+  // (ajout, suppression, import) entre deux exports.
+  const [exportSelection, setExportSelection] = useState<ExportSelection>(() =>
+    createExportSelection(state),
+  );
+
+  const openExportPanel = () => {
+    setExportSelection(createExportSelection(state));
+    openExport();
+  };
+
+  const toggleExportItemAt = (id: CollectionId, index: number) => {
+    setExportSelection((previous) =>
+      toggleExportItem(previous, id, index, countCollectionItems(state, id)),
+    );
+  };
+
+  const toggleExportCollection = (id: CollectionId) => {
+    const total = countCollectionItems(state, id);
+    const selected = countSelectedCollectionItems(state, exportSelection, id);
+
+    setExportSelection((previous) =>
+      setCollectionSelected(previous, id, total, selected !== total),
+    );
+  };
+
+  const runExport = () => {
+    void exportBpnote(exportSelection);
+    closeExport();
+  };
 
   const activeCollection = findCollection(
     pathname.startsWith("/collection/") ? pathname.slice("/collection/".length) : null,
@@ -71,7 +124,7 @@ function Shell() {
           { key: "hex", label: "Hex", icon: IconTerminal2, onPress: toggleHex },
           { key: "import", label: "Importer .bpnote", icon: IconUpload, onPress: importBpnote },
           { key: "modules", label: "Modules", icon: IconShape, onPress: openModules },
-          { key: "export", label: "Exporter .bpnote", icon: IconDownload, variant: "primary", onPress: exportBpnote },
+          { key: "export", label: "Exporter .bpnote", icon: IconDownload, variant: "primary", onPress: openExportPanel },
         ]}
       />
 
@@ -100,6 +153,18 @@ function Shell() {
       </View>
 
       <ModulesPanel />
+
+      <ExportPanel
+        visible={exportOpen}
+        state={state}
+        selection={exportSelection}
+        onToggleItem={toggleExportItemAt}
+        onToggleCollection={toggleExportCollection}
+        onSelectAll={() => setExportSelection(createExportSelection(state))}
+        onSelectNone={() => setExportSelection(selectAllItems(state, false))}
+        onClose={closeExport}
+        onExport={runExport}
+      />
     </View>
   );
 }

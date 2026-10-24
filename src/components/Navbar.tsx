@@ -98,7 +98,14 @@ export function Navbar({
   const renderAction = (action: NavbarAction, compact: boolean) => (
     <Pressable
       key={action.key}
-      onPress={action.onPress}
+      onPress={() => {
+        action.onPress?.();
+        // Une action lancée depuis le burger referme le menu : sinon il reste
+        // affiché derrière la fenêtre qu'elle ouvre.
+        if (compact) {
+          setMenuOpen(false);
+        }
+      }}
       disabled={isDisabled(action)}
       accessibilityRole="button"
       accessibilityState={{ disabled: isDisabled(action) }}

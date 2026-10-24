@@ -14,6 +14,7 @@ import {
   type BpnoteState,
 } from "@/lib/codec";
 import { pickBpnoteFiles, shareBpnote } from "@/lib/file-io";
+import { filterStateForExport, type ExportSelection } from "@/lib/export-selection";
 
 /**
  * État partagé de l'application.
@@ -52,14 +53,18 @@ type Store = {
 
   hexOpen: boolean;
   modulesOpen: boolean;
+  exportOpen: boolean;
   status: Status;
 
   toggleHex: () => void;
   openModules: () => void;
   closeModules: () => void;
+  openExport: () => void;
+  closeExport: () => void;
   dismissStatus: () => void;
   importBpnote: () => Promise<void>;
-  exportBpnote: () => Promise<void>;
+  /** Exporte l'état filtré par la sélection (tout l'état par défaut). */
+  exportBpnote: (selection?: ExportSelection) => Promise<void>;
 
   /** Ajoute une ligne et retourne son identifiant. */
   addItem: (collection: CollectionId, item: Record<string, unknown>) => number;
@@ -75,6 +80,7 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
   const [files, setFiles] = useState<string[]>([]);
   const [hexOpen, setHexOpen] = useState(false);
   const [modulesOpen, setModulesOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
 
   const counts = useMemo(() => {
@@ -87,6 +93,8 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
   const toggleHex = useCallback(() => setHexOpen((open) => !open), []);
   const openModules = useCallback(() => setModulesOpen(true), []);
   const closeModules = useCallback(() => setModulesOpen(false), []);
+  const openExport = useCallback(() => setExportOpen(true), []);
+  const closeExport = useCallback(() => setExportOpen(false), []);
   const dismissStatus = useCallback(() => setStatus({ kind: "idle" }), []);
 
   const importBpnote = useCallback(async () => {
@@ -113,14 +121,16 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
     }
   }, [state]);
 
-  const exportBpnote = useCallback(async () => {
+  const exportBpnote = useCallback(async (selection?: ExportSelection) => {
     try {
-      await shareBpnote(state);
-      setStatus({ kind: "info", message: `Exporté (${size} octets).` });
+      const exported = selection ? filterStateForExport(state, selection) : state;
+
+      await shareBpnote(exported);
+      setStatus({ kind: "info", message: `Exporté (${encodedSize(exported)} octets).` });
     } catch (error) {
       setStatus({ kind: "error", message: `Erreur d'export : ${(error as Error).message}` });
     }
-  }, [state, size]);
+  }, [state]);
 
   const addItem = useCallback((collection: CollectionId, item: Record<string, unknown>) => {
     const next = nextId(state[collection] as { id?: number }[]);
@@ -158,10 +168,13 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
       files,
       hexOpen,
       modulesOpen,
+      exportOpen,
       status,
       toggleHex,
       openModules,
       closeModules,
+      openExport,
+      closeExport,
       dismissStatus,
       importBpnote,
       exportBpnote,
@@ -176,10 +189,13 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
       files,
       hexOpen,
       modulesOpen,
+      exportOpen,
       status,
       toggleHex,
       openModules,
       closeModules,
+      openExport,
+      closeExport,
       dismissStatus,
       importBpnote,
       exportBpnote,
