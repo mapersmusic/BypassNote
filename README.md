@@ -90,6 +90,9 @@ L'export explicite (menu **Exporter .bpnote**) reste indépendant : il peut ne
 contenir qu'une sélection de lignes, alors que la sauvegarde automatique
 conserve toujours toutes les données.
 
+L'action **Réinitialiser** vide l'espace de travail et supprime ce brouillon
+(confirmation demandée). Exportez d'abord si vous voulez conserver les données.
+
 ## Structure
 
 - `src/app` — routes Expo Router (`collection/[id].tsx`)

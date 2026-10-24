@@ -8,7 +8,7 @@ import {
 } from "react";
 
 import { COLLECTIONS, type CollectionId } from "@/constants/collections";
-import { useAutosave, type AutosaveState } from "@/hooks/use-autosave";
+import { useAutosave, type AutosaveController } from "@/hooks/use-autosave";
 import {
   encodedSize,
   STANDARD_VERSION,
@@ -52,7 +52,7 @@ type Store = {
   /** Noms des fichiers importés. */
   files: string[];
   /** État de la sauvegarde automatique locale. */
-  autosave: AutosaveState;
+  autosave: AutosaveController;
 
   hexOpen: boolean;
   modulesOpen: boolean;
@@ -68,6 +68,8 @@ type Store = {
   importBpnote: () => Promise<void>;
   /** Exporte l'état filtré par la sélection (tout l'état par défaut). */
   exportBpnote: (selection?: ExportSelection) => Promise<void>;
+  /** Vide l'état et supprime le brouillon de sauvegarde automatique. */
+  resetWorkspace: () => Promise<void>;
 
   /** Ajoute une ligne et retourne son identifiant. */
   addItem: (collection: CollectionId, item: Record<string, unknown>) => number;
@@ -152,6 +154,23 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
     }
   }, [state]);
 
+  const resetWorkspace = useCallback(async () => {
+    const empty: BpnoteState = { ...EMPTY };
+
+    // Le même objet sert de référence au hook : l'état vide n'est pas
+    // immédiatement réécrit dans le fichier de travail.
+    const cleared = autosave.reset(empty);
+
+    setState(empty);
+    setFiles([]);
+    setHexOpen(false);
+    setModulesOpen(false);
+    setExportOpen(false);
+    setStatus({ kind: "info", message: "Espace de travail réinitialisé." });
+
+    await cleared;
+  }, [autosave]);
+
   const addItem = useCallback((collection: CollectionId, item: Record<string, unknown>) => {
     const next = nextId(state[collection] as { id?: number }[]);
     setState((previous) => ({
@@ -199,6 +218,7 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
       dismissStatus,
       importBpnote,
       exportBpnote,
+      resetWorkspace,
       addItem,
       updateItem,
       deleteItem,
@@ -221,6 +241,7 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
       dismissStatus,
       importBpnote,
       exportBpnote,
+      resetWorkspace,
       addItem,
       updateItem,
       deleteItem,

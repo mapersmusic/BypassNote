@@ -7,12 +7,14 @@ import { useAutosave } from "./use-autosave";
 
 jest.mock("@/lib/autosave", () => ({
   AUTOSAVE_DELAY_MS: 800,
+  clearAutosave: jest.fn(),
   loadAutosave: jest.fn(),
   saveAutosave: jest.fn(),
 }));
 
-import { loadAutosave, saveAutosave } from "@/lib/autosave";
+import { clearAutosave, loadAutosave, saveAutosave } from "@/lib/autosave";
 
+const clearMock = clearAutosave as jest.Mock;
 const loadMock = loadAutosave as jest.Mock;
 const saveMock = saveAutosave as jest.Mock;
 
@@ -42,6 +44,8 @@ async function flush() {
 describe("useAutosave", () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    clearMock.mockReset();
+    clearMock.mockResolvedValue(undefined);
     loadMock.mockReset();
     saveMock.mockReset();
     saveMock.mockResolvedValue(undefined);
@@ -145,6 +149,60 @@ describe("useAutosave", () => {
 
     expect(onError).toHaveBeenCalledTimes(1);
     expect(onError.mock.calls[0][0].message).toBe("disque plein");
+    expect(result.current.status).toBe("error");
+  });
+
+  it("supprime le brouillon et ne réécrit pas l'état vide", async () => {
+    loadMock.mockResolvedValue(null);
+
+    const { rerender, result } = renderHook(
+      ({ state }: { state: BpnoteState }) => useAutosave(state, { delayMs: 100 }),
+      { initialProps: { state: FILLED } },
+    );
+
+    await flush();
+
+    await act(async () => {
+      await result.current.reset(EMPTY);
+    });
+
+    expect(clearMock).toHaveBeenCalledTimes(1);
+
+    rerender({ state: EMPTY });
+    await act(async () => {
+      jest.advanceTimersByTime(500);
+    });
+    await flush();
+
+    expect(saveMock).not.toHaveBeenCalled();
+
+    rerender({ state: FILLED });
+    await act(async () => {
+      jest.advanceTimersByTime(100);
+    });
+    await flush();
+
+    expect(saveMock).toHaveBeenCalledTimes(1);
+    expect(saveMock).toHaveBeenCalledWith(FILLED);
+  });
+
+  it("écrase le brouillon si sa suppression échoue", async () => {
+    loadMock.mockResolvedValue(null);
+    clearMock.mockRejectedValue(new Error("suppression impossible"));
+    const onError = jest.fn();
+
+    const { result } = renderHook(() =>
+      useAutosave(FILLED, { delayMs: 100, onError }),
+    );
+
+    await flush();
+
+    await act(async () => {
+      await result.current.reset(EMPTY);
+    });
+
+    expect(saveMock).toHaveBeenCalledWith(EMPTY);
+    expect(onError).toHaveBeenCalledTimes(1);
     expect(result.current.status).toBe("error");
   });
 

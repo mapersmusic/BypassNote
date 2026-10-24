@@ -10,7 +10,7 @@ import { JetBrainsMono_500Medium } from "@expo-google-fonts/jetbrains-mono/500Me
 import { useFonts } from "expo-font";
 import { Stack, router, usePathname } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Alert, Platform, StyleSheet, View } from "react-native";
 
 import { ExportPanel } from "../components/ExportPanel";
 import { HexPanel } from "../components/HexPanel";
@@ -18,6 +18,7 @@ import {
   IconDownload,
   IconShape,
   IconTerminal2,
+  IconTrash,
   IconUpload,
 } from "../components/icons";
 import { ModulesPanel } from "../components/ModulesPanel";
@@ -75,6 +76,7 @@ function Shell() {
     closeExport,
     importBpnote,
     exportBpnote,
+    resetWorkspace,
   } = useBpnote();
 
   // La sélection est recalculée à chaque ouverture : les lignes ont pu changer
@@ -108,6 +110,23 @@ function Shell() {
     closeExport();
   };
 
+  const confirmReset = () => {
+    const message =
+      "Toutes les données et la sauvegarde automatique seront effacées. Exportez d'abord si vous voulez les conserver.";
+
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined" && window.confirm(message)) {
+        resetWorkspace();
+      }
+      return;
+    }
+
+    Alert.alert("Réinitialiser ?", message, [
+      { text: "Annuler", style: "cancel" },
+      { text: "Réinitialiser", style: "destructive", onPress: resetWorkspace },
+    ]);
+  };
+
   const activeCollection = findCollection(
     pathname.startsWith("/collection/") ? pathname.slice("/collection/".length) : null,
   );
@@ -126,6 +145,7 @@ function Shell() {
           { key: "hex", label: "Hex", icon: IconTerminal2, onPress: toggleHex },
           { key: "import", label: "Importer .bpnote", icon: IconUpload, onPress: importBpnote },
           { key: "modules", label: "Modules", icon: IconShape, onPress: openModules },
+          { key: "reset", label: "Réinitialiser", icon: IconTrash, onPress: confirmReset },
           { key: "export", label: "Exporter .bpnote", icon: IconDownload, variant: "primary", onPress: openExportPanel },
         ]}
       />

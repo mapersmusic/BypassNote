@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Platform } from "react-native";
 
-import { AUTOSAVE_DELAY_MS, loadAutosave, saveAutosave } from "@/lib/autosave";
+import {
+  AUTOSAVE_DELAY_MS,
+  clearAutosave,
+  loadAutosave,
+  saveAutosave,
+} from "@/lib/autosave";
 import type { BpnoteState } from "@/lib/codec";
 
 /**
@@ -26,6 +31,16 @@ export type AutosaveState = {
   savedAt: number | null;
 };
 
+export type AutosaveController = AutosaveState & {
+  /**
+   * Supprime le brouillon et repart de `baseline` sans le réécrire.
+   *
+   * À appeler avec le nouvel état vide : il devient la référence, donc le
+   * prochain changement réel déclenchera de nouveau une sauvegarde.
+   */
+  reset: (baseline: BpnoteState) => Promise<void>;
+};
+
 type Options = {
   /** Délai d'inactivité avant écriture. */
   delayMs?: number;
@@ -35,7 +50,10 @@ type Options = {
   onError?: (error: Error) => void;
 };
 
-export function useAutosave(state: BpnoteState, options: Options = {}): AutosaveState {
+export function useAutosave(
+  state: BpnoteState,
+  options: Options = {},
+): AutosaveController {
   const { delayMs = AUTOSAVE_DELAY_MS } = options;
 
   // Les callbacks ne doivent pas relancer la restauration à chaque rendu.
@@ -53,6 +71,7 @@ export function useAutosave(state: BpnoteState, options: Options = {}): Autosave
   // besoin d'être écrit. On ne sauvegarde qu'après une vraie modification.
   const initialState = useRef(state);
   const changed = useRef(false);
+  const discarded = useRef(false);
   const mounted = useRef(true);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queue = useRef<Promise<void>>(Promise.resolve());
@@ -89,6 +108,48 @@ export function useAutosave(state: BpnoteState, options: Options = {}): Autosave
       });
   }, []);
 
+  /** Supprime le brouillon et empêche sa réécriture immédiate. */
+  const reset = useCallback(async (baseline: BpnoteState) => {
+    discarded.current = true;
+
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+
+    initialState.current = baseline;
+    stateRef.current = baseline;
+    changed.current = false;
+    writeId.current += 1;
+
+    setStatus("idle");
+    setSavedAt(null);
+
+    // La suppression passe après les écritures déjà engagées : un ancien
+    // `persist()` ne doit pas recréer le fichier après le reset.
+    queue.current = queue.current
+      .catch(() => {})
+      .then(async () => {
+        try {
+          await clearAutosave();
+        } catch (error) {
+          // Si la suppression échoue, on écrase au moins le brouillon par
+          // l'état vide pour ne pas restaurer les anciennes données.
+          await saveAutosave(baseline);
+          throw error;
+        }
+      });
+
+    try {
+      await queue.current;
+    } catch (error) {
+      if (mounted.current) {
+        setStatus("error");
+        callbacks.current.onError?.(error as Error);
+      }
+    }
+  }, []);
+
   // Restauration initiale.
   useEffect(() => {
     let cancelled = false;
@@ -100,7 +161,9 @@ export function useAutosave(state: BpnoteState, options: Options = {}): Autosave
           return;
         }
 
-        if (draft) {
+        // Un reset peut avoir eu lieu pendant la lecture : le brouillon est
+        // alors déjà obsolète.
+        if (draft && !discarded.current) {
           callbacks.current.onRestore?.(draft);
         }
 
@@ -199,5 +262,5 @@ export function useAutosave(state: BpnoteState, options: Options = {}): Autosave
     return () => subscription.remove();
   }, [ready, persist]);
 
-  return { status, savedAt };
+  return { status, savedAt, reset };
 }
