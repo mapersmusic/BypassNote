@@ -9,8 +9,10 @@ import { JetBrainsMono_400Regular } from "@expo-google-fonts/jetbrains-mono/400R
 import { JetBrainsMono_500Medium } from "@expo-google-fonts/jetbrains-mono/500Medium";
 import { useFonts } from "expo-font";
 import { Stack, router, usePathname } from "expo-router";
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { ExportPanel } from "../components/ExportPanel";
 import { HexPanel } from "../components/HexPanel";
 import {
   IconDownload,
@@ -28,6 +30,12 @@ import {
   type CollectionId,
 } from "../constants/collections";
 import { useIsCompact, useIsWide } from "../hooks/use-breakpoint";
+import {
+  DEFAULT_EXPORT_SELECTION,
+  selectAllCollections,
+  toggleExportSelection,
+  type ExportSelection,
+} from "../lib/export-selection";
 import { BpnoteProvider, useBpnote } from "../lib/store";
 import { colors, fontFamily } from "../styles/global";
 
@@ -52,7 +60,32 @@ function Shell() {
   const pathname = usePathname();
   const isWide = useIsWide();
   const isCompact = useIsCompact();
-  const { counts, hexOpen, toggleHex, openModules, importBpnote, exportBpnote } = useBpnote();
+  const {
+    state,
+    counts,
+    hexOpen,
+    exportOpen,
+    toggleHex,
+    openModules,
+    openExport,
+    closeExport,
+    importBpnote,
+    exportBpnote,
+  } = useBpnote();
+
+  // Sélection d'export conservée tant que l'application tourne : la sauvegarde
+  // automatique, elle, gardera toujours l'état complet.
+  const [exportSelection, setExportSelection] =
+    useState<ExportSelection>(DEFAULT_EXPORT_SELECTION);
+
+  const toggleExportCollection = (id: CollectionId) => {
+    setExportSelection((previous) => toggleExportSelection(previous, id));
+  };
+
+  const runExport = () => {
+    void exportBpnote(exportSelection);
+    closeExport();
+  };
 
   const activeCollection = findCollection(
     pathname.startsWith("/collection/") ? pathname.slice("/collection/".length) : null,
@@ -71,7 +104,7 @@ function Shell() {
           { key: "hex", label: "Hex", icon: IconTerminal2, onPress: toggleHex },
           { key: "import", label: "Importer .bpnote", icon: IconUpload, onPress: importBpnote },
           { key: "modules", label: "Modules", icon: IconShape, onPress: openModules },
-          { key: "export", label: "Exporter .bpnote", icon: IconDownload, variant: "primary", onPress: exportBpnote },
+          { key: "export", label: "Exporter .bpnote", icon: IconDownload, variant: "primary", onPress: openExport },
         ]}
       />
 
@@ -100,6 +133,17 @@ function Shell() {
       </View>
 
       <ModulesPanel />
+
+      <ExportPanel
+        visible={exportOpen}
+        state={state}
+        selection={exportSelection}
+        onToggle={toggleExportCollection}
+        onSelectAll={() => setExportSelection(selectAllCollections(true))}
+        onSelectNone={() => setExportSelection(selectAllCollections(false))}
+        onClose={closeExport}
+        onExport={runExport}
+      />
     </View>
   );
 }
