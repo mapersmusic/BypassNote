@@ -14,11 +14,7 @@ import {
   type BpnoteState,
 } from "@/lib/codec";
 import { pickBpnoteFiles, shareBpnote } from "@/lib/file-io";
-import {
-  DEFAULT_EXPORT_SELECTION,
-  filterStateForExport,
-  type ExportSelection,
-} from "@/lib/export-selection";
+import { filterStateForExport, type ExportSelection } from "@/lib/export-selection";
 
 /**
  * État partagé de l'application.
@@ -67,7 +63,7 @@ type Store = {
   closeExport: () => void;
   dismissStatus: () => void;
   importBpnote: () => Promise<void>;
-  /** Exporte l'état filtré par la sélection (toutes les collections par défaut). */
+  /** Exporte l'état filtré par la sélection (tout l'état par défaut). */
   exportBpnote: (selection?: ExportSelection) => Promise<void>;
 
   /** Ajoute une ligne et retourne son identifiant. */
@@ -125,9 +121,9 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
     }
   }, [state]);
 
-  const exportBpnote = useCallback(async (selection: ExportSelection = DEFAULT_EXPORT_SELECTION) => {
+  const exportBpnote = useCallback(async (selection?: ExportSelection) => {
     try {
-      const exported = filterStateForExport(state, selection);
+      const exported = selection ? filterStateForExport(state, selection) : state;
 
       await shareBpnote(exported);
       setStatus({ kind: "info", message: `Exporté (${encodedSize(exported)} octets).` });

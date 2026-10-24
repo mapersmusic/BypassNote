@@ -3,17 +3,24 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { COLLECTIONS, type CollectionId } from "@/constants/collections";
 import { encodedSize, formatBytes, type BpnoteState } from "@/lib/codec";
 import {
-  countSelectedCollections,
+  countCollectionItems,
+  countItems,
+  countSelectedCollectionItems,
+  countSelectedItems,
+  describeExportItem,
   filterStateForExport,
+  isItemSelected,
   type ExportSelection,
 } from "@/lib/export-selection";
+import type { Row } from "@/constants/schema";
 import { colors, fontFamily, FontSize, globalStyles, radii, Spacing } from "@/styles/global";
 
 type Props = {
   visible: boolean;
   state: BpnoteState;
   selection: ExportSelection;
-  onToggle: (id: CollectionId) => void;
+  onToggleItem: (id: CollectionId, index: number) => void;
+  onToggleCollection: (id: CollectionId) => void;
   onSelectAll: () => void;
   onSelectNone: () => void;
   onClose: () => void;
@@ -23,22 +30,24 @@ type Props = {
 /**
  * Fenêtre « Exporter .bpnote ».
  *
- * L'utilisateur coche les collections à inclure dans le fichier ; la taille
- * affichée est celle du `.bpnote` filtré, pas celle de l'état complet.
+ * L'utilisateur coche les lignes à inclure, collection par collection ; la
+ * taille affichée est celle du `.bpnote` filtré, pas celle de l'état complet.
  */
 export function ExportPanel({
   visible,
   state,
   selection,
-  onToggle,
+  onToggleItem,
+  onToggleCollection,
   onSelectAll,
   onSelectNone,
   onClose,
   onExport,
 }: Props) {
-  const selectedCount = countSelectedCollections(selection);
+  const totalItems = countItems(state);
+  const selectedItems = countSelectedItems(state, selection);
   const exportedSize = encodedSize(filterStateForExport(state, selection));
-  const canExport = selectedCount > 0;
+  const canExport = selectedItems > 0;
 
   return (
     <Modal visible={visible} transparent onRequestClose={onClose}>
@@ -57,7 +66,7 @@ export function ExportPanel({
           </View>
 
           <Text style={styles.info}>
-            Choisissez les informations à inclure dans le fichier exporté. La sauvegarde
+            Choisissez les éléments à inclure dans le fichier exporté. La sauvegarde
             automatique conservera, elle, toutes les données.
           </Text>
 
@@ -70,42 +79,90 @@ export function ExportPanel({
             </Pressable>
             <View style={styles.spacer} />
             <Text style={styles.summary}>
-              {selectedCount}/{COLLECTIONS.length} · {formatBytes(exportedSize)}
+              {selectedItems}/{totalItems} · {formatBytes(exportedSize)}
             </Text>
           </View>
 
           <ScrollView style={styles.scroll} contentContainerStyle={styles.list}>
-            {COLLECTIONS.map((collection) => {
-              const checked = selection[collection.id];
-              const count = (state[collection.id] ?? []).length;
+            {totalItems === 0 ? (
+              <Text style={styles.empty}>Aucune donnée à exporter.</Text>
+            ) : (
+              COLLECTIONS.map((collection) => {
+                const items = (state[collection.id] ?? []) as Row[];
+                const total = countCollectionItems(state, collection.id);
 
-              return (
-                <Pressable
-                  key={collection.id}
-                  onPress={() => onToggle(collection.id)}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked }}
-                  accessibilityLabel={`Inclure ${collection.label} dans l'export`}
-                  style={({ pressed }) => [
-                    styles.row,
-                    checked && styles.rowActive,
-                    pressed && styles.rowPressed,
-                  ]}
-                >
-                  <View style={[styles.checkbox, checked && styles.checkboxActive]}>
-                    {checked ? <Text style={styles.check}>✓</Text> : null}
+                if (total === 0) {
+                  return null;
+                }
+
+                const selected = countSelectedCollectionItems(state, selection, collection.id);
+                const allSelected = selected === total;
+                const noneSelected = selected === 0;
+                const mixed = !allSelected && !noneSelected;
+
+                return (
+                  <View key={collection.id} style={styles.group}>
+                    <Pressable
+                      onPress={() => onToggleCollection(collection.id)}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: noneSelected ? false : allSelected ? true : "mixed" }}
+                      aria-checked={noneSelected ? false : allSelected ? true : "mixed"}
+                      accessibilityLabel={`Inclure toute la collection ${collection.label}`}
+                      style={({ pressed }) => [styles.groupHead, pressed && styles.pressed]}
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          (allSelected || mixed) && styles.checkboxActive,
+                        ]}
+                      >
+                        {allSelected ? (
+                          <Text style={styles.check}>✓</Text>
+                        ) : mixed ? (
+                          <Text style={styles.check}>–</Text>
+                        ) : null}
+                      </View>
+                      <collection.icon
+                        size={14}
+                        color={allSelected ? colors.primary : colors.textMuted}
+                      />
+                      <Text style={[styles.groupLabel, allSelected && styles.groupLabelActive]}>
+                        {collection.label}
+                      </Text>
+                      <Text style={styles.groupCount}>
+                        {selected}/{total}
+                      </Text>
+                    </Pressable>
+
+                    {items.map((item, index) => {
+                      const checked = isItemSelected(selection, collection.id, index);
+
+                      return (
+                        <Pressable
+                          key={index}
+                          onPress={() => onToggleItem(collection.id, index)}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked }}
+                          aria-checked={checked}
+                          accessibilityLabel={describeExportItem(collection.id, item, state, index)}
+                          style={({ pressed }) => [styles.itemRow, pressed && styles.pressed]}
+                        >
+                          <View style={[styles.itemCheckbox, checked && styles.checkboxActive]}>
+                            {checked ? <Text style={styles.itemCheck}>✓</Text> : null}
+                          </View>
+                          <Text
+                            numberOfLines={1}
+                            style={[styles.itemLabel, !checked && styles.itemLabelOff]}
+                          >
+                            {describeExportItem(collection.id, item, state, index)}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
                   </View>
-                  <collection.icon size={16} color={checked ? colors.primary : colors.textMuted} />
-                  <Text
-                    numberOfLines={1}
-                    style={[styles.rowLabel, checked && styles.rowLabelActive]}
-                  >
-                    {collection.label}
-                  </Text>
-                  <Text style={styles.rowCount}>{count}</Text>
-                </Pressable>
-              );
-            })}
+                );
+              })
+            )}
           </ScrollView>
 
           <View style={styles.foot}>
@@ -143,7 +200,7 @@ const styles = StyleSheet.create({
   },
   panel: {
     width: "100%",
-    maxWidth: 420,
+    maxWidth: 460,
     maxHeight: "90%",
     backgroundColor: colors.header,
     borderWidth: StyleSheet.hairlineWidth,
@@ -201,29 +258,76 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   list: {
-    gap: Spacing.one,
+    gap: Spacing.two,
   },
-  row: {
+  empty: {
+    fontFamily: fontFamily.sans,
+    fontSize: 13,
+    color: colors.textMuted,
+    paddingVertical: Spacing.three,
+    textAlign: "center",
+  },
+  group: {
+    gap: 1,
+  },
+  groupHead: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.two,
-    paddingVertical: Spacing.two,
+    paddingVertical: Spacing.one,
     paddingHorizontal: Spacing.two,
     borderRadius: radii.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  rowActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primarySoft,
+  groupLabel: {
+    flex: 1,
+    fontFamily: fontFamily.sansMedium,
+    fontSize: FontSize.small,
+    color: colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  rowPressed: {
+  groupLabelActive: {
+    color: colors.primary,
+  },
+  groupCount: {
+    fontFamily: fontFamily.mono,
+    fontSize: FontSize.micro,
+    color: colors.textMuted,
+  },
+  itemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.two,
+    paddingVertical: 5,
+    paddingLeft: Spacing.four,
+    paddingRight: Spacing.two,
+    borderRadius: radii.sm,
+  },
+  itemLabel: {
+    flex: 1,
+    fontFamily: fontFamily.sans,
+    fontSize: FontSize.small,
+    color: colors.text,
+  },
+  itemLabelOff: {
+    color: colors.textMuted,
+  },
+  pressed: {
     opacity: 0.7,
   },
   checkbox: {
     width: 16,
     height: 16,
+    borderRadius: 3,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderStrong,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  itemCheckbox: {
+    width: 14,
+    height: 14,
     borderRadius: 3,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.borderStrong,
@@ -240,20 +344,11 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     color: "#ffffff",
   },
-  rowLabel: {
-    flex: 1,
-    fontFamily: fontFamily.sans,
-    fontSize: 13,
-    color: colors.text,
-  },
-  rowLabelActive: {
-    color: colors.primary,
-    fontFamily: fontFamily.sansMedium,
-  },
-  rowCount: {
-    fontFamily: fontFamily.mono,
-    fontSize: FontSize.micro,
-    color: colors.textMuted,
+  itemCheck: {
+    fontFamily: fontFamily.sansSemiBold,
+    fontSize: 9,
+    lineHeight: 12,
+    color: "#ffffff",
   },
   foot: {
     flexDirection: "row",

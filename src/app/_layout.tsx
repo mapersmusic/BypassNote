@@ -31,9 +31,12 @@ import {
 } from "../constants/collections";
 import { useIsCompact, useIsWide } from "../hooks/use-breakpoint";
 import {
-  DEFAULT_EXPORT_SELECTION,
-  selectAllCollections,
-  toggleExportSelection,
+  countCollectionItems,
+  countSelectedCollectionItems,
+  createExportSelection,
+  selectAllItems,
+  setCollectionSelected,
+  toggleExportItem,
   type ExportSelection,
 } from "../lib/export-selection";
 import { BpnoteProvider, useBpnote } from "../lib/store";
@@ -73,13 +76,30 @@ function Shell() {
     exportBpnote,
   } = useBpnote();
 
-  // Sélection d'export conservée tant que l'application tourne : la sauvegarde
-  // automatique, elle, gardera toujours l'état complet.
-  const [exportSelection, setExportSelection] =
-    useState<ExportSelection>(DEFAULT_EXPORT_SELECTION);
+  // La sélection est recalculée à chaque ouverture : les lignes ont pu changer
+  // (ajout, suppression, import) entre deux exports.
+  const [exportSelection, setExportSelection] = useState<ExportSelection>(() =>
+    createExportSelection(state),
+  );
+
+  const openExportPanel = () => {
+    setExportSelection(createExportSelection(state));
+    openExport();
+  };
+
+  const toggleExportItemAt = (id: CollectionId, index: number) => {
+    setExportSelection((previous) =>
+      toggleExportItem(previous, id, index, countCollectionItems(state, id)),
+    );
+  };
 
   const toggleExportCollection = (id: CollectionId) => {
-    setExportSelection((previous) => toggleExportSelection(previous, id));
+    const total = countCollectionItems(state, id);
+    const selected = countSelectedCollectionItems(state, exportSelection, id);
+
+    setExportSelection((previous) =>
+      setCollectionSelected(previous, id, total, selected !== total),
+    );
   };
 
   const runExport = () => {
@@ -104,7 +124,7 @@ function Shell() {
           { key: "hex", label: "Hex", icon: IconTerminal2, onPress: toggleHex },
           { key: "import", label: "Importer .bpnote", icon: IconUpload, onPress: importBpnote },
           { key: "modules", label: "Modules", icon: IconShape, onPress: openModules },
-          { key: "export", label: "Exporter .bpnote", icon: IconDownload, variant: "primary", onPress: openExport },
+          { key: "export", label: "Exporter .bpnote", icon: IconDownload, variant: "primary", onPress: openExportPanel },
         ]}
       />
 
@@ -138,9 +158,10 @@ function Shell() {
         visible={exportOpen}
         state={state}
         selection={exportSelection}
-        onToggle={toggleExportCollection}
-        onSelectAll={() => setExportSelection(selectAllCollections(true))}
-        onSelectNone={() => setExportSelection(selectAllCollections(false))}
+        onToggleItem={toggleExportItemAt}
+        onToggleCollection={toggleExportCollection}
+        onSelectAll={() => setExportSelection(createExportSelection(state))}
+        onSelectNone={() => setExportSelection(selectAllItems(state, false))}
         onClose={closeExport}
         onExport={runExport}
       />
