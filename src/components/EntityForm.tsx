@@ -13,6 +13,7 @@ import type { CollectionId } from "@/constants/collections";
 import {
   FIELDS,
   MODE_LABELS,
+  normalizeSourceData,
   TONIC_LABELS,
   type Field,
   type Row,
@@ -52,6 +53,10 @@ export function EntityForm({ visible, collection, title, item, onClose, onSubmit
 
     for (const field of FIELDS[collection]) {
       values[field.name] = readField(field, draft);
+    }
+
+    if (collection === "sources") {
+      values.data = normalizeSourceData(Number(values.type), String(values.data ?? ""));
     }
 
     onSubmit(values);

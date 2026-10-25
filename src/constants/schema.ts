@@ -106,6 +106,63 @@ export function resolveSourceText(state: BpnoteState, sourceId: number): string 
     .join(" — ");
 }
 
+/** Extrait l'identifiant vidéo d'une URL YouTube ou conserve un identifiant brut. */
+export function extractYouTubeVideoId(value: string): string | null {
+  const data = value.trim();
+
+  if (!data) {
+    return null;
+  }
+
+  const hasProtocol = /^https?:\/\//i.test(data);
+  const isProtocolRelative = data.startsWith("//");
+  const hasYouTubeHost =
+    /^(?:(?:www|music|m)\.)?(?:youtube\.com|youtu\.be)(?:\/|$)/i.test(data);
+
+  if (hasProtocol || isProtocolRelative || hasYouTubeHost) {
+    let url: URL;
+
+    try {
+      url = new URL(
+        isProtocolRelative ? `https:${data}` : hasProtocol ? data : `https://${data}`,
+      );
+    } catch {
+      return null;
+    }
+
+    const hostname = url.hostname.toLowerCase();
+    const isShortLink = hostname === "youtu.be";
+    const isYouTubeHost =
+      hostname === "youtube.com" || hostname.endsWith(".youtube.com");
+
+    if (!isShortLink && !isYouTubeHost) {
+      return null;
+    }
+
+    const segments = url.pathname.split("/").filter(Boolean);
+    const videoId = isShortLink
+      ? segments[0]
+      : url.searchParams.get("v") ??
+        (["shorts", "embed", "live", "v"].includes(segments[0] ?? "")
+          ? segments[1]
+          : undefined);
+
+    return videoId || null;
+  }
+
+  return data;
+}
+
+/** Normalise les sources YouTube pour enregistrer l'identifiant vidéo seul. */
+export function normalizeSourceData(type: number, data: string): string {
+  if (type !== 2 && type !== 3) {
+    return data;
+  }
+
+  const trimmed = data.trim();
+  return extractYouTubeVideoId(trimmed) ?? trimmed;
+}
+
 /**
  * URL ouverte par le bouton « Lien » — transposition de `openSourceLink()`
  * de l'ancienne version web.
@@ -121,10 +178,20 @@ export function resolveSourceUrl(
   }
 
   switch (Number(source?.type)) {
-    case 2:
-      return `https://youtu.be/${encodeURIComponent(data)}${timestamp ? `?t=${timestamp}` : ""}`;
-    case 3:
-      return `https://music.youtube.com/watch?v=${encodeURIComponent(data)}${timestamp ? `&t=${timestamp}` : ""}`;
+    case 2: {
+      const videoId = extractYouTubeVideoId(data);
+      if (!videoId) {
+        return /^https?:\/\//i.test(data) ? data : null;
+      }
+      return `https://youtu.be/${encodeURIComponent(videoId)}${timestamp ? `?t=${timestamp}` : ""}`;
+    }
+    case 3: {
+      const videoId = extractYouTubeVideoId(data);
+      if (!videoId) {
+        return /^https?:\/\//i.test(data) ? data : null;
+      }
+      return `https://music.youtube.com/watch?v=${encodeURIComponent(videoId)}${timestamp ? `&t=${timestamp}` : ""}`;
+    }
     default:
       return /^https?:\/\//i.test(data) ? data : `https://${data}`;
   }
