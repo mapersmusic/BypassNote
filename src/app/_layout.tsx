@@ -128,7 +128,9 @@ function Shell() {
   };
 
   const activeCollection = findCollection(
-    pathname.startsWith("/collection/") ? pathname.slice("/collection/".length) : null,
+    pathname.startsWith("/collection/")
+      ? pathname.slice("/collection/".length)
+      : null,
   );
 
   const goToCollection = (id: CollectionId) => {
@@ -143,10 +145,31 @@ function Shell() {
         autosave={autosave}
         actions={[
           { key: "hex", label: "Hex", icon: IconTerminal2, onPress: toggleHex },
-          { key: "import", label: "Importer .bpnote", icon: IconUpload, onPress: importBpnote },
-          { key: "modules", label: "Modules", icon: IconShape, onPress: openModules },
-          { key: "reset", label: "Réinitialiser", icon: IconTrash, onPress: confirmReset },
-          { key: "export", label: "Exporter .bpnote", icon: IconDownload, variant: "primary", onPress: openExportPanel },
+          {
+            key: "import",
+            label: "Importer .bpnote",
+            icon: IconUpload,
+            onPress: importBpnote,
+          },
+          {
+            key: "modules",
+            label: "Modules",
+            icon: IconShape,
+            onPress: openModules,
+          },
+          {
+            key: "reset",
+            label: "Réinitialiser",
+            icon: IconTrash,
+            onPress: confirmReset,
+          },
+          {
+            key: "export",
+            label: "Exporter .bpnote",
+            icon: IconDownload,
+            variant: "primary",
+            onPress: openExportPanel,
+          },
         ]}
       />
 
@@ -155,7 +178,9 @@ function Shell() {
 
       {/* `.layout` — colonne sous 960 px, ligne au-delà ; la barre latérale
           disparaît sous 640 px et le burger prend le relais. */}
-      <View style={[styles.layout, isWide ? styles.layoutRow : styles.layoutColumn]}>
+      <View
+        style={[styles.layout, isWide ? styles.layoutRow : styles.layoutColumn]}
+      >
         {!isCompact ? (
           <Sidebar
             layout={isWide ? "rail" : "grid"}
