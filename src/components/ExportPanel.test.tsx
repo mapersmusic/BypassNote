@@ -93,9 +93,10 @@ describe("ExportPanel", () => {
 
     renderPanel({ selection, onExport });
 
+    fireEvent.changeText(screen.getByLabelText("Nom du fichier (sans extension)"), "mon-export");
     fireEvent.press(screen.getByLabelText("Exporter la sélection"));
 
-    expect(onExport).toHaveBeenCalledTimes(1);
+    expect(onExport).toHaveBeenCalledWith("mon-export");
   });
 
   it("affiche le nombre de lignes cochées et la taille filtrée", () => {

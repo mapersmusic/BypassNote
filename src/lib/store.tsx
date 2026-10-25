@@ -67,7 +67,7 @@ type Store = {
   dismissStatus: () => void;
   importBpnote: () => Promise<void>;
   /** Exporte l'état filtré par la sélection (tout l'état par défaut). */
-  exportBpnote: (selection?: ExportSelection) => Promise<void>;
+  exportBpnote: (selection?: ExportSelection, name?: string) => Promise<void>;
   /** Vide l'état et supprime le brouillon de sauvegarde automatique. */
   resetWorkspace: () => Promise<void>;
 
@@ -143,11 +143,11 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
     }
   }, [state]);
 
-  const exportBpnote = useCallback(async (selection?: ExportSelection) => {
+  const exportBpnote = useCallback(async (selection?: ExportSelection, name?: string) => {
     try {
       const exported = selection ? filterStateForExport(state, selection) : state;
 
-      await shareBpnote(exported);
+      await shareBpnote(exported, name);
       setStatus({ kind: "info", message: `Exporté (${encodedSize(exported)} octets).` });
     } catch (error) {
       setStatus({ kind: "error", message: `Erreur d'export : ${(error as Error).message}` });

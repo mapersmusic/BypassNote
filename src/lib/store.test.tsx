@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { clearAutosave, loadAutosave, saveAutosave } from "@/lib/autosave";
 import type { BpnoteState } from "@/lib/codec";
-import { pickBpnoteFiles } from "@/lib/file-io";
+import { pickBpnoteFiles, shareBpnote } from "@/lib/file-io";
 
 import { BpnoteProvider, useBpnote } from "./store";
 
@@ -23,6 +23,7 @@ const clearMock = clearAutosave as jest.Mock;
 const loadMock = loadAutosave as jest.Mock;
 const saveMock = saveAutosave as jest.Mock;
 const pickMock = pickBpnoteFiles as jest.Mock;
+const shareMock = shareBpnote as jest.Mock;
 
 const EMPTY_STATE: BpnoteState = {
   version: { major: 0, minor: 1 },
@@ -48,6 +49,8 @@ beforeEach(() => {
   saveMock.mockResolvedValue(undefined);
   pickMock.mockReset();
   pickMock.mockResolvedValue({ files: [], merged: EMPTY_STATE });
+  shareMock.mockReset();
+  shareMock.mockResolvedValue("file:///cache/mon-export.bpnote");
 });
 
 describe("BpnoteProvider — réinitialisation", () => {
@@ -158,6 +161,20 @@ describe("BpnoteProvider — import", () => {
     expect(result.current.status).toEqual({
       kind: "error",
       message: "Erreur d'import : protobuf invalide",
+    });
+  });
+
+  describe("BpnoteProvider — export", () => {
+    it("transmet le nom personnalisé au partage du fichier", async () => {
+      const { result } = renderHook(() => useBpnote(), { wrapper });
+
+      await waitFor(() => expect(result.current.autosave.status).not.toBe("loading"));
+
+      await act(async () => {
+        await result.current.exportBpnote(undefined, "mon-export");
+      });
+
+      expect(shareMock).toHaveBeenCalledWith(EMPTY_STATE, "mon-export");
     });
   });
 });
