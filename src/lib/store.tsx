@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { COLLECTIONS, type CollectionId } from "@/constants/collections";
+import { useAutosave, type AutosaveController } from "@/hooks/use-autosave";
 import {
   encodedSize,
   STANDARD_VERSION,
@@ -50,6 +51,8 @@ type Store = {
   size: number;
   /** Noms des fichiers importés. */
   files: string[];
+  /** État de la sauvegarde automatique locale. */
+  autosave: AutosaveController;
 
   hexOpen: boolean;
   modulesOpen: boolean;
@@ -65,6 +68,8 @@ type Store = {
   importBpnote: () => Promise<void>;
   /** Exporte l'état filtré par la sélection (tout l'état par défaut). */
   exportBpnote: (selection?: ExportSelection) => Promise<void>;
+  /** Vide l'état et supprime le brouillon de sauvegarde automatique. */
+  resetWorkspace: () => Promise<void>;
 
   /** Ajoute une ligne et retourne son identifiant. */
   addItem: (collection: CollectionId, item: Record<string, unknown>) => number;
@@ -82,6 +87,23 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
   const [modulesOpen, setModulesOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+
+  const restoreDraft = useCallback((draft: BpnoteState) => {
+    setState(draft);
+    setStatus({ kind: "info", message: "Sauvegarde automatique restaurée." });
+  }, []);
+
+  const reportAutosaveError = useCallback((error: Error) => {
+    setStatus({
+      kind: "error",
+      message: `Sauvegarde automatique impossible : ${error.message}`,
+    });
+  }, []);
+
+  const autosave = useAutosave(state, {
+    onRestore: restoreDraft,
+    onError: reportAutosaveError,
+  });
 
   const counts = useMemo(() => {
     const entries = COLLECTIONS.map(({ id }) => [id, (state[id] ?? []).length] as const);
@@ -132,6 +154,23 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
     }
   }, [state]);
 
+  const resetWorkspace = useCallback(async () => {
+    const empty: BpnoteState = { ...EMPTY };
+
+    // Le même objet sert de référence au hook : l'état vide n'est pas
+    // immédiatement réécrit dans le fichier de travail.
+    const cleared = autosave.reset(empty);
+
+    setState(empty);
+    setFiles([]);
+    setHexOpen(false);
+    setModulesOpen(false);
+    setExportOpen(false);
+    setStatus({ kind: "info", message: "Espace de travail réinitialisé." });
+
+    await cleared;
+  }, [autosave]);
+
   const addItem = useCallback((collection: CollectionId, item: Record<string, unknown>) => {
     const next = nextId(state[collection] as { id?: number }[]);
     setState((previous) => ({
@@ -166,6 +205,7 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
       counts,
       size,
       files,
+      autosave,
       hexOpen,
       modulesOpen,
       exportOpen,
@@ -178,6 +218,7 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
       dismissStatus,
       importBpnote,
       exportBpnote,
+      resetWorkspace,
       addItem,
       updateItem,
       deleteItem,
@@ -187,6 +228,7 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
       counts,
       size,
       files,
+      autosave,
       hexOpen,
       modulesOpen,
       exportOpen,
@@ -199,6 +241,7 @@ export function BpnoteProvider({ children }: { children: ReactNode }) {
       dismissStatus,
       importBpnote,
       exportBpnote,
+      resetWorkspace,
       addItem,
       updateItem,
       deleteItem,

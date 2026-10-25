@@ -13,6 +13,7 @@ import {
   collectionHref,
   type CollectionId,
 } from "@/constants/collections";
+import type { AutosaveState } from "@/hooks/use-autosave";
 import { useIsWide } from "@/hooks/use-breakpoint";
 import {
   IconDownload,
@@ -58,6 +59,8 @@ type NavbarProps = {
   activeCollectionId?: CollectionId;
   /** Navigation vers une collection depuis le burger (écran étroit). */
   onSelectCollection?: (id: CollectionId) => void;
+  /** État de la sauvegarde automatique locale. */
+  autosave?: AutosaveState;
 };
 
 /**
@@ -73,6 +76,7 @@ export function Navbar({
   actions = DEFAULT_ACTIONS,
   activeCollectionId,
   onSelectCollection,
+  autosave,
 }: NavbarProps) {
   const isWide = useIsWide();
   const pathname = usePathname();
@@ -134,6 +138,8 @@ export function Navbar({
           <Text style={styles.verpillLabel}>app</Text>
           <Text style={styles.verpillValue}>{APP_VERSION}</Text>
         </View>
+
+        {autosave ? <AutosavePill autosave={autosave} showTime={isWide} /> : null}
 
         <View style={styles.spacer} />
 
@@ -215,6 +221,56 @@ export function Navbar({
   );
 }
 
+/** Heure locale de la dernière sauvegarde, au format 24 h. */
+function formatSavedAt(timestamp: number): string {
+  const date = new Date(timestamp);
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+/**
+ * Pastille discrète de la sauvegarde automatique.
+ *
+ * Elle n'affiche pas de message tant que la relecture initiale n'est pas
+ * terminée, puis se contente d'un point et de l'heure : le détail (erreur ou
+ * restauration) passe par le bandeau de statut.
+ */
+function AutosavePill({
+  autosave,
+  showTime,
+}: {
+  autosave: AutosaveState;
+  showTime: boolean;
+}) {
+  const { status, savedAt } = autosave;
+
+  if (status === "loading") {
+    return null;
+  }
+
+  const isError = status === "error";
+  const label = isError
+    ? "Sauvegarde automatique en erreur"
+    : savedAt !== null
+      ? `Sauvegardé automatiquement à ${formatSavedAt(savedAt)}`
+      : "Sauvegarde automatique activée";
+
+  return (
+    <View style={styles.autopill} accessibilityRole="text" accessibilityLabel={label}>
+      <View
+        style={[
+          styles.autodot,
+          savedAt !== null && !isError && styles.autodotSaved,
+          isError && styles.autodotError,
+        ]}
+      />
+      <Text style={styles.autolabel}>auto</Text>
+      {showTime && savedAt !== null && !isError ? (
+        <Text style={styles.autotime}>{formatSavedAt(savedAt)}</Text>
+      ) : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
@@ -251,6 +307,39 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.sansMedium,
     color: colors.text,
     fontSize: FontSize.small,
+  },
+  autopill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    paddingVertical: Spacing.half,
+    paddingHorizontal: Spacing.two,
+  },
+  autodot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.textMuted,
+  },
+  autodotSaved: {
+    backgroundColor: colors.primary,
+  },
+  autodotError: {
+    backgroundColor: colors.alert,
+  },
+  autolabel: {
+    fontFamily: fontFamily.sansMedium,
+    fontSize: FontSize.micro,
+    color: colors.textMuted,
+  },
+  autotime: {
+    fontFamily: fontFamily.mono,
+    fontSize: FontSize.micro,
+    color: colors.textMuted,
   },
   spacer: {
     flex: 1,

@@ -76,6 +76,23 @@ npx cap build android
 
 Raccourci : `npm run cap:sync` rebuild `dist/` puis lance `npx cap sync`.
 
+## Sauvegarde automatique
+
+L'état complet est enregistré dans un `.bpnote` de travail après chaque
+modification (800 ms d'inactivité), puis restauré au lancement suivant.
+
+- **Natif** : fichier `bypassnote-autosave.bpnote` dans le dossier documents de
+  l'application (jamais partagé).
+- **Web / Capacitor** : mêmes octets stockés dans IndexedDB sous le même nom,
+  `expo-file-system` n'ayant pas d'implémentation web utilisable.
+
+L'export explicite (menu **Exporter .bpnote**) reste indépendant : il peut ne
+contenir qu'une sélection de lignes, alors que la sauvegarde automatique
+conserve toujours toutes les données.
+
+L'action **Réinitialiser** vide l'espace de travail et supprime ce brouillon
+(confirmation demandée). Exportez d'abord si vous voulez conserver les données.
+
 ## Structure
 
 - `src/app` — routes Expo Router (`collection/[id].tsx`)
