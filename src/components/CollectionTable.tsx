@@ -20,10 +20,14 @@ type Props = {
   onDelete: (item: Row) => void;
 };
 
-/** Largeur minimale d'une colonne avant de faire défiler horizontalement. */
-const MIN_COLUMN_WIDTH = 150;
+/** Largeur minimale des colonnes textuelles ; l'espace libre est partagé entre elles. */
+const MIN_COLUMN_WIDTH = 92;
+const ID_COLUMN_WIDTH = 56;
+const TYPE_COLUMN_WIDTH = 78;
+const COMPACT_COLUMN_WIDTH = 68;
 /** Colonne d'actions (crayon / poubelle), largeur fixe. */
-const ACTIONS_WIDTH = 88;
+const ACTIONS_WIDTH = 72;
+const LINK_COLUMN_WIDTH = 40;
 
 /**
  * Identité React d'une ligne.
@@ -143,7 +147,14 @@ export function CollectionTable({ collection, onAdd, onEdit, onDelete }: Props) 
                   key={column.key}
                   onPress={() => toggleSort(column.key)}
                   disabled={column.sortable === false}
-                  style={[styles.cell, styles.headCell, column.link !== undefined && styles.linkCell]}
+                  style={[
+                    styles.cell,
+                    column.key === "id" && styles.idCell,
+                    column.key === "type" && styles.typeCell,
+                    (column.key === "bpm" || column.key === "timestamp") && styles.compactCell,
+                    styles.headCell,
+                    column.link !== undefined && styles.linkCell,
+                  ]}
                   accessibilityRole="button"
                   accessibilityState={{ disabled: column.sortable === false }}
                 >
@@ -174,7 +185,13 @@ export function CollectionTable({ collection, onAdd, onEdit, onDelete }: Props) 
                   return (
                     <View
                       key={column.key}
-                      style={[styles.cell, column.link !== undefined && styles.linkCell]}
+                      style={[
+                        styles.cell,
+                        column.key === "id" && styles.idCell,
+                        column.key === "type" && styles.typeCell,
+                        (column.key === "bpm" || column.key === "timestamp") && styles.compactCell,
+                        column.link !== undefined && styles.linkCell,
+                      ]}
                     >
                       {column.link !== undefined ? (
                         href ? (
@@ -334,8 +351,22 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     flexBasis: 0,
     minWidth: MIN_COLUMN_WIDTH,
-    paddingHorizontal: Spacing.three,
+    paddingHorizontal: Spacing.two,
     paddingVertical: 7,
+  },
+  idCell: {
+    width: ID_COLUMN_WIDTH,
+    minWidth: ID_COLUMN_WIDTH,
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: "auto",
+    paddingHorizontal: Spacing.one,
+  },
+  typeCell: {
+    minWidth: TYPE_COLUMN_WIDTH,
+  },
+  compactCell: {
+    minWidth: COMPACT_COLUMN_WIDTH,
   },
   headCell: {
     justifyContent: "center",
@@ -373,8 +404,8 @@ const styles = StyleSheet.create({
   },
   /** Colonne « Lien » : réduite à la largeur de son icône. */
   linkCell: {
-    width: 56,
-    minWidth: 56,
+    width: LINK_COLUMN_WIDTH,
+    minWidth: LINK_COLUMN_WIDTH,
     flexGrow: 0,
     flexShrink: 0,
     flexBasis: "auto",
