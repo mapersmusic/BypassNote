@@ -57,6 +57,8 @@ type NavbarProps = {
   actions?: NavbarAction[];
   /** Collection courante — sert à mettre en évidence l'entrée active du burger. */
   activeCollectionId?: CollectionId;
+  /** Nombre d'éléments par collection, affiché dans le menu mobile. */
+  counts?: Partial<Record<CollectionId, number>>;
   /** Navigation vers une collection depuis le burger (écran étroit). */
   onSelectCollection?: (id: CollectionId) => void;
   /** État de la sauvegarde automatique locale. */
@@ -75,6 +77,7 @@ type NavbarProps = {
 export function Navbar({
   actions = DEFAULT_ACTIONS,
   activeCollectionId,
+  counts,
   onSelectCollection,
   autosave,
 }: NavbarProps) {
@@ -211,6 +214,11 @@ export function Navbar({
                   >
                     {collection.label}
                   </Text>
+                  {counts?.[collection.id] !== undefined ? (
+                    <Text style={[styles.menuCount, isActive && styles.menuCountActive]}>
+                      {counts[collection.id]}
+                    </Text>
+                  ) : null}
                 </Pressable>
               );
             })}
@@ -432,5 +440,18 @@ const styles = StyleSheet.create({
   menuItemLabelActive: {
     color: colors.primary,
     fontFamily: fontFamily.sansMedium,
+  },
+  menuCount: {
+    fontFamily: fontFamily.sans,
+    fontSize: FontSize.micro,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: radii.pill,
+    color: colors.textMuted,
+  },
+  menuCountActive: {
+    backgroundColor: "rgba(108, 99, 255, 0.25)",
+    color: colors.primary,
   },
 });

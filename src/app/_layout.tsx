@@ -141,6 +141,7 @@ function Shell() {
     <View style={styles.root}>
       <Navbar
         activeCollectionId={activeCollection?.id}
+        counts={counts}
         onSelectCollection={goToCollection}
         autosave={autosave}
         actions={[
