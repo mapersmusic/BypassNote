@@ -1,4 +1,5 @@
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { COLLECTIONS, type CollectionId } from "@/constants/collections";
 import { encodedSize, formatBytes, type BpnoteState } from "@/lib/codec";
@@ -24,7 +25,7 @@ type Props = {
   onSelectAll: () => void;
   onSelectNone: () => void;
   onClose: () => void;
-  onExport: () => void;
+  onExport: (name: string) => void;
 };
 
 /**
@@ -44,6 +45,7 @@ export function ExportPanel({
   onClose,
   onExport,
 }: Props) {
+  const [filename, setFilename] = useState("export");
   const totalItems = countItems(state);
   const selectedItems = countSelectedItems(state, selection);
   const exportedSize = encodedSize(filterStateForExport(state, selection));
@@ -165,6 +167,21 @@ export function ExportPanel({
             )}
           </ScrollView>
 
+          <Text style={styles.filenameLabel}>Nom du fichier</Text>
+          <View style={styles.filenameField}>
+            <TextInput
+              value={filename}
+              onChangeText={setFilename}
+              accessibilityLabel="Nom du fichier (sans extension)"
+              placeholder="export"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={styles.filenameInput}
+            />
+            <Text style={styles.filenameExtension}>.bpnote</Text>
+          </View>
+
           <View style={styles.foot}>
             <Pressable
               onPress={onClose}
@@ -174,7 +191,7 @@ export function ExportPanel({
               <Text style={styles.btnText}>Annuler</Text>
             </Pressable>
             <Pressable
-              onPress={onExport}
+              onPress={() => onExport(filename)}
               disabled={!canExport}
               accessibilityRole="button"
               accessibilityState={{ disabled: !canExport }}
@@ -227,11 +244,41 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginBottom: Spacing.two,
   },
+  filenameField: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderStrong,
+    borderRadius: radii.sm,
+    backgroundColor: colors.surface,
+    marginBottom: Spacing.two,
+    paddingHorizontal: Spacing.two,
+  },
+  filenameInput: {
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: Spacing.one,
+    fontFamily: fontFamily.sans,
+    fontSize: FontSize.small,
+    color: colors.text,
+  },
+  filenameExtension: {
+    fontFamily: fontFamily.sans,
+    fontSize: FontSize.small,
+    color: colors.textMuted,
+  },
   toolbar: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.one,
+    marginTop: Spacing.one,
     marginBottom: Spacing.two,
+  },
+  filenameLabel: {
+    marginTop: Spacing.two,
+    fontFamily: fontFamily.sansMedium,
+    fontSize: FontSize.micro,
+    color: colors.textSecondary,
   },
   toolBtn: {
     paddingVertical: 3,

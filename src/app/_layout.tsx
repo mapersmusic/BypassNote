@@ -105,8 +105,8 @@ function Shell() {
     );
   };
 
-  const runExport = () => {
-    void exportBpnote(exportSelection);
+  const runExport = (name: string) => {
+    void exportBpnote(exportSelection, name);
     closeExport();
   };
 
