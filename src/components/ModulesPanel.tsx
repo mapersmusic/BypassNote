@@ -142,6 +142,8 @@ export function ModulesPanel() {
             kind: "error",
             message: "La fenêtre du module a été bloquée par le navigateur.",
           });
+        } else {
+          closeModules();
         }
         return;
       }
