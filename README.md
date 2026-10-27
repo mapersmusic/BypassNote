@@ -49,6 +49,57 @@ Pour un sous-répertoire (`user.github.io/BypassNote/`), ajoutez `baseUrl` dans
 }
 ```
 
+## Application desktop (Tauri)
+
+Le projet peut aussi être empaqueté en application desktop avec Tauri v2.
+Tauri utilise le build web Expo (`dist/`) comme frontend.
+
+### Prérequis
+
+- Rust 1.90 ou plus, installé avec `rustup`
+- Node.js 20 ou plus
+- Dépendances système : WebView2 (Windows), Xcode Command Line Tools (macOS), `libwebkit2gtk-4.1-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev` et `patchelf` (Linux)
+
+### Développement
+
+```sh
+npm install
+npm run dev
+```
+
+`npm run dev` lance le serveur Expo web puis ouvre la fenêtre Tauri.
+
+### Build
+
+```sh
+npm run build
+```
+
+Le build web est généré dans `dist/`, puis empaqueté par Tauri. Les installateurs sont écrits dans `src-tauri/target/release/bundle/` (`msi`/`nsis` sur Windows, `dmg`/`app` sur macOS, `appimage`/`deb` sur Linux).
+
+### Structure desktop
+
+```text
+src-tauri/
+  Cargo.toml
+  build.rs
+  tauri.conf.json
+  capabilities/
+  icons/
+  src/main.rs
+dist/                  # build Expo utilisé par Tauri
+```
+
+### Icônes
+
+```sh
+npm run icons
+```
+
+Les icônes sont générées depuis `assets/icon.png`.
+
+La CI GitHub Actions vérifie le formatage Rust, Clippy et les tests, puis construit les installateurs Windows, macOS et Linux.
+
 ## Build Android (Capacitor)
 
 Capacitor utilise le dossier `dist/` généré par `npm run build:web`.

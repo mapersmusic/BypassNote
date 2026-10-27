@@ -12,7 +12,11 @@
     "cap:sync": "npm run build:web && npx cap sync",
     "lint": "expo lint",
     "test": "jest && node --test \"bpnote_modules/**/*.test.js\" \"bpnote_modules/**/*.test.mjs\" \"bpnote_modules/**/*.test.cjs\"",
-    "proto:json": "pbjs -t json -o src/lib/bpnote_pb.json src/lib/bpnote_file/bpnote_0_1.proto"
+    "proto:json": "pbjs -t json -o src/lib/bpnote_pb.json src/lib/bpnote_file/bpnote_0_1.proto",
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "icons": "tauri icon assets/icon.png"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
@@ -66,7 +70,8 @@
     "metro-source-map": "^0.87.1",
     "protobufjs-cli": "^2.7.1",
     "react-test-renderer": "19.2.0",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "@tauri-apps/cli": "^2.1.0"
   },
   "jest": {
     "preset": "jest-expo"

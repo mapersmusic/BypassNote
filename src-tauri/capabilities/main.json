@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/tauri2-capability",
+  "identifier": "main",
+  "description": "Permissions par défaut de la fenêtre principale de BypassNote",
+  "windows": ["main"],
+  "permissions": [
+    "core:default"
+  ]
+}
