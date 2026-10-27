@@ -1,10 +1,9 @@
-To generate Tauri icons, run:
+# Tauri icons
 
-npm run tauri icon ../../assets/icon.png
+These icons are generated from `assets/icon.png`. To regenerate them, run from the repository root:
 
-This will create:
-- icon.ico (Windows)
-- icon.icns (macOS)
-- 32x32.png, 128x128.png, 128x128@2x.png (Linux/macOS)
+```bash
+npm run icons
+```
 
-All files will be placed in this directory automatically.
+This creates `icon.ico` (Windows), `icon.icns` (macOS), and the PNG sizes used by Linux and Windows bundles in this directory.

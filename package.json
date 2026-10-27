@@ -6,8 +6,9 @@
     "proto:ts": "pbts -o www/bpnote_pb.d.ts www/bpnote_pb.js",
     "build-proto": "npm run proto:js && npm run proto:ts",
     "tauri": "tauri",
-    "tauri dev": "tauri dev",
-    "tauri build": "tauri build"
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "icons": "tauri icon assets/icon.png"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
