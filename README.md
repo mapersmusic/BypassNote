@@ -55,23 +55,55 @@ npx cap build android
 
 ## Build desktop app with Tauri
 
-This branch includes Tauri configuration for building desktop applications (Windows, macOS, Linux).
+This project includes Tauri configuration for building desktop applications (Windows, macOS, Linux).
 
 ### Prerequisites
 
-- [Rust](https://www.rust-lang.org/tools/install) (1.70 or later)
-- [Node.js](https://nodejs.org/) (18 or later)
+- [Rust](https://www.rust-lang.org/tools/install) (1.90 or later, installed with `rustup`)
+- [Node.js](https://nodejs.org/) (20 or later)
+- Platform dependencies: WebView2 on Windows, Xcode Command Line Tools on macOS, and `libwebkit2gtk-4.1-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev` and `patchelf` on Linux
+
+Install the JavaScript dependencies once:
+
+```bash
+npm install
+```
 
 ### Running the app
 
+The protobuf files are generated automatically before each dev run and build.
+
 #### Development mode
 ```bash
-npm run tauri dev
+npm run dev
 ```
 
 #### Production build
 ```bash
-npm run tauri build
+npm run build
+```
+
+Installers are written to `src-tauri/target/release/bundle/` (`msi`/`nsis` on Windows, `dmg`/`app` on macOS, `appimage`/`deb` on Linux).
+
+### Project structure
+
+```text
+src-tauri/
+  Cargo.toml          # Rust/Tauri application
+  build.rs
+  tauri.conf.json     # Tauri configuration
+  capabilities/       # Window permissions
+  icons/              # Generated app icons
+  src/main.rs
+www/                  # Frontend loaded by Tauri (frontendDist)
+```
+
+### Regenerating icons
+
+Icons are generated from `assets/icon.png`:
+
+```bash
+npm run icons
 ```
 
 ### Building for all platforms
@@ -80,11 +112,11 @@ The GitHub Actions workflow automatically builds for Windows, macOS, and Linux. 
 
 ```bash
 # Windows
-npm run tauri build -- --target x86_64-pc-windows-msvc
+npm run build -- --target x86_64-pc-windows-msvc
 
 # macOS
-npm run tauri build -- --target universal-apple-darwin
+npm run build -- --target universal-apple-darwin
 
 # Linux
-npm run tauri build -- --target x86_64-unknown-linux-gnu
+npm run build -- --target x86_64-unknown-linux-gnu
 ```
