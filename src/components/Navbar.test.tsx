@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 
 import { IconDownload } from "./icons";
 import { Navbar } from "./Navbar";
+import packageJson from "../../package.json";
 
 jest.mock("expo-router", () => ({
   router: { push: jest.fn() },
@@ -13,6 +14,12 @@ jest.mock("@/hooks/use-breakpoint", () => ({
 }));
 
 describe("Navbar", () => {
+  it("affiche la version déclarée dans package.json", () => {
+    render(<Navbar actions={[]} />);
+
+    expect(screen.getByText(packageJson.version)).toBeTruthy();
+  });
+
   it("referme le menu après avoir lancé une action", () => {
     const onPress = jest.fn();
 
