@@ -15,6 +15,7 @@ const MINIMUM_FIXED_VERSIONS: Record<string, string> = {
 
 type PackageJson = {
   overrides?: Record<string, string>;
+  scripts?: Record<string, string>;
 };
 
 function parseVersion(value: string): number[] {
@@ -53,6 +54,25 @@ describe("overrides de sécurité npm", () => {
       expect(override).toBeDefined();
       expect(version).toHaveLength(3);
       expect(compareVersions(version, parseVersion(minimum))).toBeGreaterThanOrEqual(0);
+    },
+  );
+
+  it("configure un audit bloquant les vulnérabilités élevées et critiques", () => {
+    const audit = packageJson.scripts?.audit ?? "";
+
+    expect(audit).toContain("npm audit");
+    expect(audit).toContain("--audit-level=high");
+  });
+
+  it.each(["tests.yml", "tauri-build.yml"])(
+    "exécute l'audit dans le workflow %s",
+    (workflow) => {
+      const content = readFileSync(
+        join(process.cwd(), ".github", "workflows", workflow),
+        "utf8",
+      );
+
+      expect(content).toContain("npm run audit");
     },
   );
 });

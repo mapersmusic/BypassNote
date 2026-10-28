@@ -12,6 +12,7 @@
     "cap:sync": "npm run build:web && npx cap sync",
     "lint": "expo lint",
     "test": "jest && node --test \"bpnote_modules/**/*.test.js\" \"bpnote_modules/**/*.test.mjs\" \"bpnote_modules/**/*.test.cjs\"",
+    "audit": "npm audit --audit-level=high",
     "proto:json": "pbjs -t json -o src/lib/bpnote_pb.json src/lib/bpnote_file/bpnote_0_1.proto",
     "tauri": "tauri",
     "dev": "tauri dev",
