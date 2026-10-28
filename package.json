@@ -1,6 +1,6 @@
 {
   "name": "bypass-note",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -63,16 +63,18 @@
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
+    "@tauri-apps/cli": "^2.1.0",
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.2.2",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~55.0.1",
     "jest": "^29.7.0",
     "jest-expo": "~55.0.22",
     "metro-source-map": "^0.87.1",
     "protobufjs-cli": "^2.7.1",
     "react-test-renderer": "19.2.0",
-    "typescript": "~5.9.2",
-    "@tauri-apps/cli": "^2.1.0"
+    "typescript": "~5.9.2"
   },
   "overrides": {
     "sharp": "^0.35.5",
