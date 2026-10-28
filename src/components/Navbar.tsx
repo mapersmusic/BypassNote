@@ -26,11 +26,15 @@ import {
   type IconProps,
 } from "@/components/icons";
 import { colors, FontSize, fontFamily, radii, Spacing } from "@/styles/global";
+import packageJson from "../../package.json";
 
-const APP_VERSION = "0.1";
-
-/** En dessous de cette largeur les actions basculent dans le menu (@media 960px de l'ancienne version web). */
-const COMPACT_BREAKPOINT = 960;
+/**
+ * Version affichée dans la pastille de l'en-tête.
+ *
+ * Elle est lue depuis `package.json`, source unique partagée avec les tags de
+ * release, pour qu'elle ne puisse plus se désynchroniser de la version publiée.
+ */
+const APP_VERSION: string = packageJson.version;
 
 /** Composant d'icône — voir `./icons`. */
 type IconComponent = ComponentType<IconProps>;

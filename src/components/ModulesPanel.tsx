@@ -261,7 +261,7 @@ export function ModulesPanel() {
               </Pressable>
 
               <Text style={styles.hint}>
-                Pour un paquet .zip, l'archive doit contenir directement manifest.json et
+                Pour un paquet .zip, l&apos;archive doit contenir directement manifest.json et
                 son entrée à la racine, sans dossier parent.
               </Text>
             </ScrollView>

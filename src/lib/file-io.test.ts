@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import { getDocumentAsync } from "expo-document-picker";
 
 import { encode, STANDARD_VERSION, type BpnoteState } from "./codec";
 import { pickBpnoteFiles } from "./file-io";
@@ -35,8 +36,6 @@ jest.mock("expo-sharing", () => ({
   isAvailableAsync: jest.fn(async () => false),
   shareAsync: jest.fn(),
 }));
-
-import { getDocumentAsync } from "expo-document-picker";
 
 const getDocumentMock = getDocumentAsync as jest.Mock;
 
