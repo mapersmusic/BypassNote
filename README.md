@@ -22,6 +22,22 @@ npm run web      # serveur de dev web
 npm run android  # dev Android
 ```
 
+## Sécurité des dépendances
+
+```sh
+npm run audit
+```
+
+La commande échoue dès qu'une vulnérabilité **élevée** ou **critique** est
+détectée. Elle est exécutée par les workflows `Tests` et `Tauri Build` sur
+chaque pull request, ainsi qu'une fois par semaine pour détecter les avis
+publiés après coup.
+
+Les dépendances transitives corrigées sont épinglées dans le champ `overrides`
+de `package.json` (`tar`, `sharp`, `uuid`, `zod`). Ne lancez pas
+`npm audit fix --force` : il rétrograde Expo, Jest et React Native Testing
+Library vers des versions incompatibles.
+
 ## Build web
 
 ```sh
