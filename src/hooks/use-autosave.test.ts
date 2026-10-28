@@ -1,6 +1,7 @@
 import { act, renderHook } from "@testing-library/react-native";
 import { AppState } from "react-native";
 
+import { clearAutosave, loadAutosave, saveAutosave } from "@/lib/autosave";
 import type { BpnoteState } from "@/lib/codec";
 
 import { useAutosave } from "./use-autosave";
@@ -11,8 +12,6 @@ jest.mock("@/lib/autosave", () => ({
   loadAutosave: jest.fn(),
   saveAutosave: jest.fn(),
 }));
-
-import { clearAutosave, loadAutosave, saveAutosave } from "@/lib/autosave";
 
 const clearMock = clearAutosave as jest.Mock;
 const loadMock = loadAutosave as jest.Mock;

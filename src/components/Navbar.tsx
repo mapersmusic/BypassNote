@@ -36,9 +36,6 @@ import packageJson from "../../package.json";
  */
 const APP_VERSION: string = packageJson.version;
 
-/** En dessous de cette largeur les actions basculent dans le menu (@media 960px de l'ancienne version web). */
-const COMPACT_BREAKPOINT = 960;
-
 /** Composant d'icône — voir `./icons`. */
 type IconComponent = ComponentType<IconProps>;
 
