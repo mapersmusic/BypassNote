@@ -1,6 +1,7 @@
 node_modules/
 scripts/
 android/
+coverage/
 /icons/
 bpnote_modules/**/*.zip
 package-lock.json

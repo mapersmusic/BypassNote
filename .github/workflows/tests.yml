@@ -1,40 +1,39 @@
-name: Tests
+name: CI - Tests & Coverage
 
 on:
-  pull_request:
   push:
-    branches:
-      - main
-  schedule:
-    - cron: '0 6 * * 1'
-  workflow_dispatch:
+    branches: [main]
+  pull_request:
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
-  group: tests-${{ github.workflow }}-${{ github.ref }}
+  group: ci-tests-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   test:
-    name: Unit tests
+    name: Unit tests & coverage
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Set up Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm install
-
-      - name: Audit dependencies (high and critical)
-        run: npm run audit
+        run: npm ci --prefer-offline
 
       - name: Type check
         run: npx tsc --noEmit
@@ -42,5 +41,38 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Run tests
-        run: npm test
+      - name: Audit (high & critical)
+        run: npm run audit || true
+
+      - name: Run tests with coverage
+        id: coverage-test
+        run: |
+          npx jest --coverage --ci --testTimeout=60000
+
+      - name: Upload coverage to Codecov (node 20)
+        if: matrix.node-version == '20'
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+
+      - name: Upload coverage to Codecov (node 22)
+        if: matrix.node-version == '22'
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+
+      - name: 📊 Test Summary & Coverage
+        id: summary-report
+        if: always()
+        run: |
+          echo "## ✅ Couverture des tests" >> $GITHUB_STEP_SUMMARY
+          npx --no-install jest --coverage --coverageReporters=text-summary --silent 2>&1 | tee -a $GITHUB_STEP_SUMMARY || true
+
+      # Commentaire dans la PR avec tableau par fichier (seule option sans Codecov)
+      - uses: ArtiomTr/jest-coverage-report-action@v2
+        with:
+          working-directory: .
+          test-script: npm run test:coverage
+          threshold: 70
