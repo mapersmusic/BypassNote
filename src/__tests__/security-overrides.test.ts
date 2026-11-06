@@ -97,4 +97,13 @@ describe("overrides de sécurité npm", () => {
       expect(content).toContain("npm ci");
     },
   );
+
+  it("ne dépend pas de l'action ArtiomTr, absente de la branche de base", () => {
+    const content = readFileSync(
+      join(process.cwd(), ".github", "workflows", "tests.yml"),
+      "utf8",
+    );
+
+    expect(content).not.toContain("ArtiomTr/jest-coverage-report-action");
+  });
 });

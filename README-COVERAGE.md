@@ -33,9 +33,12 @@ Le workflow `.github/workflows/tests.yml` :
 5. **Exécute Jest avec coverage** et envoie le rapport à Codecov
 6. Génère un résumé dans `GITHUB_STEP_SUMMARY`
 
-### Sans Codecov (optionnel)
+### Rapport dans la PR
 
-Le fichier `.github/workflows/tests.yml` inclut automatiquement l'action `ArtiomTr/jest-coverage-report-action@v2` qui génère un tableau par fichier directement dans le PR — aucune clé de Secret n'est nécessaire.
+Le rapport détaillé est publié par **Codecov** (`codecov/codecov-action`) à partir de
+`coverage/lcov.info`. L'upload est non bloquant (`fail_ci_if_error: false`) pour que
+l'absence de token ne fasse pas échouer la CI. Un résumé texte est également écrit
+dans `GITHUB_STEP_SUMMARY`.
 
 ## Seuils
 

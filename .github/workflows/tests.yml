@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 concurrency:
   group: ci-tests-${{ github.workflow }}-${{ github.ref }}
@@ -63,10 +62,3 @@ jobs:
         run: |
           echo "## ✅ Couverture des tests" >> $GITHUB_STEP_SUMMARY
           npx --no-install jest --coverage --coverageReporters=text-summary --silent 2>&1 | tee -a $GITHUB_STEP_SUMMARY || true
-
-      # Commentaire dans la PR avec tableau par fichier (seule option sans Codecov)
-      - uses: ArtiomTr/jest-coverage-report-action@v2
-        with:
-          working-directory: .
-          test-script: npm run test:coverage
-          threshold: 35
