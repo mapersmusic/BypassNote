@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
@@ -7,6 +7,9 @@ import { join } from "node:path";
  * Jest ou React Native Testing Library vers des versions incompatibles.
  */
 const MINIMUM_FIXED_VERSIONS: Record<string, string> = {
+  "decode-uri-component": "0.5.1",
+  "markdown-it": "14.3.3",
+  "node-forge": "1.4.1",
   sharp: "0.35.5",
   tar: "7.5.21",
   uuid: "11.1.1",
@@ -75,4 +78,32 @@ describe("overrides de sécurité npm", () => {
       expect(content).toContain("npm run audit");
     },
   );
+
+  it("versionne package-lock.json pour permettre npm ci et le cache CI", () => {
+    const gitignore = readFileSync(join(process.cwd(), ".gitignore"), "utf8");
+
+    expect(gitignore).not.toMatch(/^\s*package-lock\.json\s*$/m);
+    expect(existsSync(join(process.cwd(), "package-lock.json"))).toBe(true);
+  });
+
+  it.each(["tests.yml", "tauri-build.yml"])(
+    "installe les dépendances avec npm ci dans le workflow %s",
+    (workflow) => {
+      const content = readFileSync(
+        join(process.cwd(), ".github", "workflows", workflow),
+        "utf8",
+      );
+
+      expect(content).toContain("npm ci");
+    },
+  );
+
+  it("ne dépend pas de l'action ArtiomTr, absente de la branche de base", () => {
+    const content = readFileSync(
+      join(process.cwd(), ".github", "workflows", "tests.yml"),
+      "utf8",
+    );
+
+    expect(content).not.toContain("ArtiomTr/jest-coverage-report-action");
+  });
 });
